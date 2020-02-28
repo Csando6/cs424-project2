@@ -57,7 +57,7 @@ ui <- dashboardPage(
       
       
       
-      #right column (tables)  - amber here
+      #right column (tables)  - amber this is the first part
       column(4,
              
              # < BAR CHART BY YEAR >:
@@ -100,7 +100,7 @@ server <- function(input, output) {
   
   
   
-  
+  #amber: this is the other part
   
   
   
