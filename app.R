@@ -14,17 +14,15 @@ library(scales)
 data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
 
 
-#project code here...
-
 #SHINY DASHBOARD
 
 # Create the shiny dashboard
 ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
-  dashboardSidebar(disable = FALSE, collapsed = FALSE,
-                   
-  #Sidebar input                 
+  dashboardSidebar(disable = FALSE, collapsed = FALSE
 
+  #input                   
+                   
   ),
   
   #Body
