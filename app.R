@@ -21,15 +21,59 @@ ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE
 
-  #input                   
+  # < INPUT FROM USER >:                  
                    
   ),
   
   #Body
   dashboardBody(
     
-      #put fluidRows and columns here
+    # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
+    fluidRow(
+      
+      #left column
+      column(4,
+             
+              # < LEAFLET >:
+             
+               box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
+                   leafletOutput("leaf", height = 600)
+               ),
+             
+             
+             
+             # < TABLE OF HURRICANES SINCE 2005 >:
+             
+             
+             
+      ),
+      
+      #middle coulumn
+      column(4,
 
+              # < sEARCH BY DAY >:
+             
+      ),
+      
+      
+      
+      #right column (tables)  - amber this is the first part
+      column(4,
+             
+             # < BAR CHART BY YEAR >:
+             
+             
+             # < BAR CHART BY MAX STRENGTH >:
+             
+             
+             # < ABOUT >:
+      )
+      
+      
+      
+    ) #end major fluidRow
+
+    # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
 
 
@@ -39,24 +83,29 @@ server <- function(input, output) {
   theme_set(theme_grey(base_size = 18))
   
   
-  #GET REACTIVE DATA FROM INPUT:
-  #(from P1):
-  
-            # calculate the values one time and re-use them in multiple charts to speed things up
-            # <- reactive({subset(filtered, filtered$username == input$Picker)}) #contatins just the data about selected picker
-            
-            
-            # observeEvent(input$Picker, {
-            #   print(paste0("You have chosen: ", input$Picker))
-            # })
+  #REACTIVE DATA HERE
   
   
+  #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
-  #PLOT THE DATA:
   
-  #insert data components here
+  # add a leaflet map of the atlantic
+  output$leaf <- renderLeaflet({
+    map <- leaflet()
+    map <- addTiles(map)
+    map <- setView(map, lng = -35.947, lat = 26.121, zoom = 2)
+    map
+  })
+  
+  
+  
+  
+  #amber: this is the other part
+  
+  
+  
+  #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   
 }
 
 shinyApp(ui = ui, server = server)
-
