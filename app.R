@@ -12,7 +12,18 @@ library(scales)
 
 #read in datafile
 data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
+data$date <- ymd(data$date)
 
+#getting data from 2005 and onwards
+data2 <- data[year(data$date)>2005,]
+
+#getting code and name of hurricanes, saving max windspeed of hurrican from 2005 and onwards
+data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize(max_speed =max(max_speed))
+data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
+
+#getting top 10 hurrican speed
+data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
+data4 <- data4[1:10,]
 
 #SHINY DASHBOARD
 
@@ -21,7 +32,8 @@ ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE
 
-  # < INPUT FROM USER >:                  
+  # < INPUT FROM USER >:
+    
                    
   ),
   
