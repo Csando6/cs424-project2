@@ -25,16 +25,21 @@ data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
 data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
 data4 <- data4[1:10,]
 
+#range of hurrican data
+data5 <- range(year(data2$date))
+
 #SHINY DASHBOARD
 
 # Create the shiny dashboard
 ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
-  dashboardSidebar(disable = FALSE, collapsed = FALSE
+  dashboardSidebar(disable = FALSE, collapsed = FALSE,
 
   # < INPUT FROM USER >:
-    
-                   
+  
+    selectInput("hurrYear","Hurrican By Year",append("All",seq(data5[1],data5[2],by=1) )),
+    selectInput("hurrName","Hurrican Name",append("All",as.character(data3$hur_code)) ),
+    selectInput("hurrTop","Hurrican Top 10",append("All",as.character(data4$hur_code)) )
   ),
   
   #Body
@@ -45,39 +50,24 @@ ui <- dashboardPage(
       
       #left column
       column(4,
-             
               # < LEAFLET >:
-             
                box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                    leafletOutput("leaf", height = 600)
                ),
-             
-             
-             
+               box(title="Total Trash picked up by Tag", solidHeader = TRUE, status="primary", width=12,
+                   dataTableOutput("atlanticData", height=400)
+               )
              # < TABLE OF HURRICANES SINCE 2005 >:
-             
-             
-             
       ),
-      
       #middle coulumn
       column(4,
-
               # < sEARCH BY DAY >:
-             
       ),
-      
-      
-      
       #right column (tables)  - amber this is the first part
       column(4,
              
              # < BAR CHART BY YEAR >:
-             
-             
              # < BAR CHART BY MAX STRENGTH >:
-             
-             
              # < ABOUT >:
       )
       
@@ -92,8 +82,23 @@ ui <- dashboardPage(
 server <- function(input, output) {
   
   # increase the default font size
-  theme_set(theme_grey(base_size = 18))
-  
+  theme_set(theme_grey(base_size = 18) )
+  tableOne = data2;
+  hurrYearR <- reactive(
+    if(input$hurrYear == "All"){
+      tableOne = data2 
+    }
+  )
+  hurrNameR <- reactive(
+    if(input$hurrName == "All"){
+      tableOne = data2 
+    }
+  )
+  hurrTopR <- reactive(
+    if(input$hurrTop == "All"){
+      tableOne = data2 
+    }
+  )
   
   #REACTIVE DATA HERE
   
@@ -108,6 +113,10 @@ server <- function(input, output) {
     map <- setView(map, lng = -35.947, lat = 26.121, zoom = 2)
     map
   })
+  output$atlanticData <- renderDT(
+    tableOne
+  )
+
   
   
   
