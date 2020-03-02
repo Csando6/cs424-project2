@@ -7,6 +7,7 @@ library(jpeg)
 library(grid)
 library(leaflet)
 library(scales)
+library(dplyr)
 
 #note: the data file to be read here needs to be processed by out Python script first.
 
@@ -14,8 +15,13 @@ library(scales)
 data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 
+#getting data from 2018 and onwards
+data1year <- data[year(data$date)==2018,]  # | year(data$date)<=2011,]
+#data1year <- data1year[seq(1, nrow(data1year), 2), ]  #get every other point
+
 #getting data from 2005 and onwards
-data2 <- data[year(data$date)>2005,]
+data2 <- data[year(data$date)>=2005,]
+
 
 #getting code and name of hurricanes, saving max windspeed of hurrican from 2005 and onwards
 data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize(max_speed =max(max_speed))
@@ -35,6 +41,7 @@ ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
 
+
   # < INPUT FROM USER >:
   
     selectInput("hurrYear","Hurrican By Year",append("All",seq(data5[1],data5[2],by=1) )),
@@ -50,18 +57,20 @@ ui <- dashboardPage(
       
       #left column
       column(4,
-              # < LEAFLET >:
-               box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
-                   leafletOutput("leaf", height = 600)
-               ),
-               box(title="Total Trash picked up by Tag", solidHeader = TRUE, status="primary", width=12,
-                   dataTableOutput("atlanticData", height=400)
-               )
+             # < LEAFLET >:
+             box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
+                 leafletOutput("leaf", height = 1000)
+             ),
              # < TABLE OF HURRICANES SINCE 2005 >:
+             box(title="Atlantic Hurricanes", solidHeader = TRUE, status="primary", width=12,
+                 dataTableOutput("atlanticData", height=400)
+             )
+
       ),
       #middle coulumn
       column(4,
-              # < sEARCH BY DAY >:
+             # < sEARCH BY DAY >:
+             
       ),
       #right column (tables)  - amber this is the first part
       column(4,
@@ -74,7 +83,7 @@ ui <- dashboardPage(
       
       
     ) #end major fluidRow
-
+    
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
 
@@ -106,17 +115,38 @@ server <- function(input, output) {
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
   
+  
+  # Create a continuous palette function (from leaflet documentation)
+  pal <- colorNumeric(
+    palette = "Reds",
+    domain = data1year$max_speed)
+  
+  square <- function(x){
+    return(x*x)
+  }
+  
   # add a leaflet map of the atlantic
   output$leaf <- renderLeaflet({
     map <- leaflet()
     map <- addTiles(map)
-    map <- setView(map, lng = -35.947, lat = 26.121, zoom = 2)
+    map <- setView(map, lng = -35.947, lat = 39.121, zoom = 3)
+    map <- addCircles(map, 
+                      lng = data1year$lon, lat = data1year$lat, 
+                      color = pal(data1year$max_speed), 
+                      weight = data1year$max_speed / 5,    #1->5   2->20   3->40
+                      label = paste("(", data1year$lat, ",", data1year$lon, ")")) #concat
     map
   })
   output$atlanticData <- renderDT(
     tableOne
   )
 
+  
+  
+  output$atlanticData <- renderDT(
+    tableOne
+  )
+  
   
   
   
