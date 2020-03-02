@@ -22,6 +22,7 @@ data1year <- data[year(data$date)==2018,]  # | year(data$date)<=2011,]
 #getting data from 2005 and onwards
 data2 <- data[year(data$date)>=2005,]
 
+
 #getting code and name of hurricanes, saving max windspeed of hurrican from 2005 and onwards
 data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize(max_speed =max(max_speed))
 data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
@@ -39,12 +40,13 @@ data5 <- range(year(data2$date))
 ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
-                   
-                   # < INPUT FROM USER >:
-                   
-                   selectInput("hurrYear","Hurrican By Year",append("All",seq(data5[1],data5[2],by=1) )),
-                   selectInput("hurrName","Hurrican Name",append("All",as.character(data3$hur_code)) ),
-                   selectInput("hurrTop","Hurrican Top 10",append("All",as.character(data4$hur_code)) )
+
+
+  # < INPUT FROM USER >:
+  
+    selectInput("hurrYear","Hurrican By Year",append("All",seq(data5[1],data5[2],by=1) )),
+    selectInput("hurrName","Hurrican Name",append("All",as.character(data3$hur_code)) ),
+    selectInput("hurrTop","Hurrican Top 10",append("All",as.character(data4$hur_code)) )
   ),
   
   #Body
@@ -54,22 +56,24 @@ ui <- dashboardPage(
     fluidRow(
       
       #left column
-      column(8,
+      column(4,
              # < LEAFLET >:
              box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                  leafletOutput("leaf", height = 1000)
              ),
-             box(title="Total Trash picked up by Tag", solidHeader = TRUE, status="primary", width=12,
+             # < TABLE OF HURRICANES SINCE 2005 >:
+             box(title="Atlantic Hurricanes", solidHeader = TRUE, status="primary", width=12,
                  dataTableOutput("atlanticData", height=400)
              )
-             # < TABLE OF HURRICANES SINCE 2005 >:
+
       ),
       #middle coulumn
-      column(2,
+      column(4,
              # < sEARCH BY DAY >:
+             
       ),
       #right column (tables)  - amber this is the first part
-      column(2,
+      column(4,
              
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
@@ -133,6 +137,10 @@ server <- function(input, output) {
                       label = paste("(", data1year$lat, ",", data1year$lon, ")")) #concat
     map
   })
+  output$atlanticData <- renderDT(
+    tableOne
+  )
+
   
   
   output$atlanticData <- renderDT(
