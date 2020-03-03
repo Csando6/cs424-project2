@@ -56,7 +56,7 @@ ui <- dashboardPage(
     fluidRow(
       
       #left column
-      column(4,
+      column(8,
              # < LEAFLET >:
              box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                  leafletOutput("leaf", height = 1000)
@@ -68,12 +68,12 @@ ui <- dashboardPage(
 
       ),
       #middle coulumn
-      column(4,
+      column(2,
              # < sEARCH BY DAY >:
              
       ),
       #right column (tables)  - amber this is the first part
-      column(4,
+      column(2,
              
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
@@ -92,7 +92,7 @@ server <- function(input, output) {
   
   # increase the default font size
   theme_set(theme_grey(base_size = 18) )
-  tableOne = data2;
+  tableOne = data2[year(data2$date) == 2018,];
   hurrYearR <- reactive(
     if(input$hurrYear == "All"){
       tableOne = data2 
@@ -133,8 +133,21 @@ server <- function(input, output) {
     map <- addCircles(map, 
                       lng = data1year$lon, lat = data1year$lat, 
                       color = pal(data1year$max_speed), 
-                      weight = data1year$max_speed / 5,    #1->5   2->20   3->40
-                      label = paste("(", data1year$lat, ",", data1year$lon, ")")) #concat
+                      weight = data1year$max_speed / 4,    #1->5   2->20   3->40
+                      #label = paste("(", data1year$lat, ",", data1year$lon, ")") #concat
+                      label = paste(data1year$max_speed, " knots, ", data1year$min_pressure, " millibars, on",
+                                    month(data1year$date), "/", day(data1year$date), "/", year(data1year$date), " @ ", data1year$time
+                                    ), #concat
+                      labelOptions = labelOptions(textOnly = TRUE, direction = "top")
+    )
+    # map <-   addPolylines(
+    #                   map,
+    #                   data = data1year,
+    #                   lng = data1year$lon, 
+    #                   lat = data1year$lat,
+    #                   weight = 3,
+    #                   opacity = 3
+    #) 
     map
   })
   output$atlanticData <- renderDT(
