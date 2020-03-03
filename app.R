@@ -7,6 +7,7 @@ library(jpeg)
 library(grid)
 library(leaflet)
 library(scales)
+library(dplyr)
 
 #note: the data file to be read here needs to be processed by out Python script first.
 
@@ -37,9 +38,9 @@ ui <- dashboardPage(
 
   # < INPUT FROM USER >:
   
-    selectInput("hurrYear","Hurrican By Year",append("All",seq(data5[1],data5[2],by=1) )),
-    selectInput("hurrName","Hurrican Name",append("All",as.character(data3$hur_code)) ),
-    selectInput("hurrTop","Hurrican Top 10",append("All",as.character(data4$hur_code)) )
+    selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
+    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_code)) ),
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) )
   ),
   
   #Body
@@ -55,7 +56,7 @@ ui <- dashboardPage(
                    leafletOutput("leaf", height = 600)
                ),
                box(title="Total Trash picked up by Tag", solidHeader = TRUE, status="primary", width=12,
-                   dataTableOutput("atlanticData", height=400)
+                   dataTableOutput("hurrTable", height=400)
                )
              # < TABLE OF HURRICANES SINCE 2005 >:
       ),
@@ -83,20 +84,24 @@ server <- function(input, output) {
   
   # increase the default font size
   theme_set(theme_grey(base_size = 18) )
-  tableOne = data2;
+  tableOne <- data2;
   hurrYearR <- reactive(
     if(input$hurrYear == "All"){
-      tableOne = data2 
+      tableOne <- data2
+    }
+    else{
+      tableOne <- data2[year(data2$date)==2000,]
     }
   )
+  
   hurrNameR <- reactive(
     if(input$hurrName == "All"){
-      tableOne = data2 
+      tableOne <- data2 
     }
   )
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
-      tableOne = data2 
+      tableOne <- data2 
     }
   )
   
@@ -113,8 +118,13 @@ server <- function(input, output) {
     map <- setView(map, lng = -35.947, lat = 26.121, zoom = 2)
     map
   })
-  output$atlanticData <- renderDT(
-    tableOne
+  output$hurrTable <- DT::renderDataTable(
+    DT::datatable({
+        tableOne <- hurrYearR()
+      },
+      options = list(searching = FALSE, pageLength = 5, lengthChange = FALSE
+      ), rownames = FALSE
+    )
   )
 
   
