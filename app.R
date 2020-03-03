@@ -15,6 +15,10 @@ library(dplyr)
 data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 
+#getting data from 2018 and onwards
+data1year <- data[year(data$date)==2018,]  # | year(data$date)<=2011,]
+#data1year <- data1year[seq(1, nrow(data1year), 2), ]  #get every other point
+
 #getting data from 2005 and onwards
 data2 <- data[year(data$date)>=2005,]
 
@@ -39,6 +43,7 @@ ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
 
+
   # < INPUT FROM USER >:
   
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
@@ -53,6 +58,7 @@ ui <- dashboardPage(
     fluidRow(
       
       #left column
+
       column(10,
               # < LEAFLET >:
                box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
@@ -71,6 +77,7 @@ ui <- dashboardPage(
       ),
       #right column (tables)  - amber this is the first part
       column(1,
+
              
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
@@ -80,7 +87,7 @@ ui <- dashboardPage(
       
       
     ) #end major fluidRow
-
+    
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
 
@@ -93,8 +100,6 @@ server <- function(input, output) {
   
   # increase the default font size
   theme_set(theme_grey(base_size = 18) )
-  
-  
   filter <- reactive(
     if(input$hurrYear == "All" & input$hurrName == "All"){
       tableOne <- data2
@@ -140,11 +145,39 @@ server <- function(input, output) {
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
   
+  
+  # Create a continuous palette function (from leaflet documentation)
+  pal <- colorNumeric(
+    palette = "Reds",
+    domain = data1year$max_speed)
+  
+  square <- function(x){
+    return(x*x)
+  }
+  
   # add a leaflet map of the atlantic
   output$leaf <- renderLeaflet({
     map <- leaflet()
     map <- addTiles(map)
-    map <- setView(map, lng = -35.947, lat = 26.121, zoom = 2) #filter()
+    map <- setView(map, lng = -35.947, lat = 39.121, zoom = 3)
+    map <- addCircles(map, 
+                      lng = data1year$lon, lat = data1year$lat, 
+                      color = pal(data1year$max_speed), 
+                      weight = data1year$max_speed / 4,    #1->5   2->20   3->40
+                      #label = paste("(", data1year$lat, ",", data1year$lon, ")") #concat
+                      label = paste(data1year$max_speed, " knots, ", data1year$min_pressure, " millibars, on",
+                                    month(data1year$date), "/", day(data1year$date), "/", year(data1year$date), " @ ", data1year$time
+                                    ), #concat
+                      labelOptions = labelOptions(textOnly = TRUE, direction = "top")
+    )
+    # map <-   addPolylines(
+    #                   map,
+    #                   data = data1year,
+    #                   lng = data1year$lon, 
+    #                   lat = data1year$lat,
+    #                   weight = 3,
+    #                   opacity = 3
+    #) 
     map
   })
   
@@ -162,6 +195,12 @@ server <- function(input, output) {
     
   
 
+  
+  
+  output$atlanticData <- renderDT(
+    tableOne
+  )
+  
   
   
   
