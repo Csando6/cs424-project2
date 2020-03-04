@@ -16,18 +16,18 @@ data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 
 #getting data from 2018 and onwards
-data1year <- data[year(data$date)==2018,]  # | year(data$date)<=2011,]
+data1year <- data[year(data$date) == 2018,] # | year(data$date)<=2011,]
 #data1year <- data1year[seq(1, nrow(data1year), 2), ]  #get every other point
 
 #getting data from 2005 and onwards
-data2 <- data[year(data$date)>=2005,]
+data2 <- data[year(data$date) >= 2005,]
 
 #select columns
-data2 <- data2[c(0:2, 4:11)]
+#data2 <- data2[c(0:2, 4:11)]
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize(max_speed =max(max_speed))
-data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
+data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
+data3 <- data3[order(data3$hur_name, decreasing = FALSE),]
 
 #getting top 10 hurrican speed
 data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
@@ -44,77 +44,83 @@ ui <- dashboardPage(
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
 
 
-  # < INPUT FROM USER >:
-  
-    selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) )
+# < INPUT FROM USER >:
+
+    selectInput("hurrYear", "Hurricane By Year", append("All", seq(data5[1], data5[2], by = 1)), selected = 2018),
+    selectInput("hurrName", "Hurricane Name", append("All", as.character(data3$hur_name))),
+    selectInput("hurrTop", "Hurricane Top 10", append("All", as.character(data4$hur_code)))
   ),
-  
-  #Body
+
+#Body
   dashboardBody(
-    
-    # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
+
+# APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
-      
-      #left column
+
+#left column
 
       column(10,
-              # < LEAFLET >:
+# < LEAFLET >:
                box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                    leafletOutput("leaf", height = 600)
                ),
-             
-             # < TABLE OF HURRICANES SINCE 2005 >:
-               box(title="Hurricane List", solidHeader = TRUE, status="primary", width=12,
-                   dataTableOutput("hurrTable", height=400)
+
+# < TABLE OF HURRICANES SINCE 2005 >:
+               box(title = "Hurricane List", solidHeader = TRUE, status = "primary", width = 12,
+                   dataTableOutput("hurrTable", height = 400)
                )
-             
+
       ),
-      #middle coulumn
+#middle coulumn
       column(1,
-              # < sEARCH BY DAY >:
+# < sEARCH BY DAY >:
       ),
-      #right column (tables)  - amber this is the first part
+#right column (tables)  - amber this is the first part
       column(1,
 
-             
-             # < BAR CHART BY YEAR >:
-             # < BAR CHART BY MAX STRENGTH >:
-             # < ABOUT >:
+
+# < BAR CHART BY YEAR >:
+# < BAR CHART BY MAX STRENGTH >:
+# < ABOUT >:
       )
-      
-      
-      
+
+
+
     ) #end major fluidRow
-    
-    # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+# application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
 
 
 server <- function(input, output) {
-  
-  
+
+
   #data1year <- data[year(data$date)==2018 | year(data$date)<=2011,]
-  
-  
+
+
   # increase the default font size
-  theme_set(theme_grey(base_size = 18) )
+  theme_set(theme_grey(base_size = 18))
   filter <- reactive(
-    if(input$hurrYear == "All" & input$hurrName == "All"){
+    if (input$hurrYear == "All" & input$hurrName == "All") {
       tableOne <- data2
+      tableOne <- tableOne[c(0:2, 4:11)]
     }
-    else if (input$hurrName == "All"){  #filter by year:
-      tableOne <- data2[year(data2$date)==input$hurrYear,]
-    }
-    else if (input$hurrYear == "All"){  #filter by name:
-      tableOne <- data2[data2$hur_name==input$hurrName,]
-    }
-    else{
-      tableOne <- data2[year(data2$date)==input$hurrYear & data2$hur_name==input$hurrName,]
-    }
+  else if (input$hurrName == "All") {
+    #filter by year:
+    tableOne <- data2[year(data2$date) == input$hurrYear,]
+    tableOne <- tableOne[c(0:2, 4:11)]
+  }
+  else if (input$hurrYear == "All") {
+    #filter by name:
+    tableOne <- data2[data2$hur_name == input$hurrName,]
+    tableOne <- tableOne[c(0:2, 4:11)]
+  }
+  else {
+    tableOne <- data2[year(data2$date) == input$hurrYear & data2$hur_name == input$hurrName,]
+    tableOne <- tableOne[c(0:2, 4:11)]
+  }
   )
-  
+
   # hurrYearR <- reactive(
   #   if(input$hurrYear == "All"){
   #     tableOne <- data2
@@ -132,39 +138,39 @@ server <- function(input, output) {
   #     tableOne <- data2[data2$hur_code==input$hurrName,]
   #   }
   # )
-  
+
   hurrTopR <- reactive(
-    if(input$hurrTop == "All"){
-      tableOne <- data2 
+    if (input$hurrTop == "All") {
+      tableOne <- data2
     }
   )
-  
+
   #REACTIVE DATA HERE
-  
-  
+
+
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-  
-  
-  
+
+
+
   # Create a continuous palette function (from leaflet documentation)
   pal <- colorNumeric(
     palette = "Reds",
     domain = data1year$max_speed)
-  
-  square <- function(x){
-    return(x*x)
+
+  square <- function(x) {
+    return(x * x)
   }
-  
+
   # add a leaflet map of the atlantic
   output$leaf <- renderLeaflet({
     map <- leaflet()
     map <- addTiles(map)
     map <- setView(map, lng = -35.947, lat = 39.121, zoom = 3)
-    map <- addCircles(map, 
-                      lng = data1year$lon, lat = data1year$lat, 
-                      color = pal(data1year$max_speed), 
-                      weight = data1year$max_speed / 4,    #1->5   2->20   3->40
-                      #label = paste("(", data1year$lat, ",", data1year$lon, ")") #concat
+    map <- addCircles(map,
+                      lng = data1year$lon, lat = data1year$lat,
+                      color = pal(data1year$max_speed),
+                      weight = data1year$max_speed / 4, #1->5   2->20   3->40
+    #label = paste("(", data1year$lat, ",", data1year$lon, ")") #concat
                       label = paste(data1year$max_speed, " knots, ", data1year$min_pressure, " millibars, on",
                                     month(data1year$date), "/", day(data1year$date), "/", year(data1year$date), " @ ", data1year$time
                                     ), #concat
@@ -180,9 +186,9 @@ server <- function(input, output) {
     #) 
     map
   })
-  
-    
-    output$hurrTable <- DT::renderDataTable(
+
+
+  output$hurrTable <- DT::renderDataTable(
       DT::datatable({
         filter()
       },
@@ -190,27 +196,27 @@ server <- function(input, output) {
       ), rownames = FALSE
       )
     )
-    
-    
-    
-  
 
-  
-  
+
+
+
+
+
+
   output$atlanticData <- renderDT(
     tableOne
   )
-  
-  
-  
-  
-  
+
+
+
+
+
   #amber: this is the other part
-  
-  
-  
+
+
+
   #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  
+
 }
 
 shinyApp(ui = ui, server = server)
