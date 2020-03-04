@@ -8,6 +8,7 @@ library(grid)
 library(leaflet)
 library(scales)
 library(dplyr)
+library(plyr)
 
 #note: the data file to be read here needs to be processed by out Python script first.
 
@@ -36,12 +37,8 @@ data4 <- data4[1:10,]
 #range of hurrican data
 data5 <- range(year(data2$date))
 
-yearOfHurricanes <-year(data$date)
+#yearOfHurricanes <-year(data$date)
 
-hurrByYear <- data2 %>% group_by(hur_code, hur_name, year(date)) %>% summarize(max_speed =max(max_speed))
-
-
-
-
+# hurrByYear <- data2 %>% group_by(hur_code, hur_name, year(date)) %>% summarize(max_speed =max(max_speed))
 
 
