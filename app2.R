@@ -32,4 +32,5 @@ data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
 
 temp1 <- year(data2$date)
 temp2 <- data2[year(data2$date)==2010,]
+temp10 <- 0:50
 
