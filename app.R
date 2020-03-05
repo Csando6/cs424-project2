@@ -27,7 +27,8 @@ data2 <- data[year(data$date)>=2005,]
 data2 <- data2[c(0:2, 4:11)]
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize(max_speed =max(max_speed))
+
+data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize()
 data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
 
 #getting top 10 hurrican speed
@@ -49,7 +50,8 @@ ui <- dashboardPage(
   
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
     selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) )
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) ),
+    checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL)
   ),
   
   #Body
@@ -91,7 +93,7 @@ ui <- dashboardPage(
     
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
-
+#added a comment here for no reason
 
 server <- function(input, output) {
   
@@ -189,6 +191,8 @@ server <- function(input, output) {
       ), rownames = FALSE
       )
     )
+    
+   # output$value <- renderText({ input$somevalue })
     
     
     
