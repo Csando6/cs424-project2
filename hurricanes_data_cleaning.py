@@ -9,8 +9,9 @@ headers= []
 data=[]
 
 #input file:
-# filename = input("Enter file to be converted: ")  #ex: 
-filename = "AtlanticHurricaneDatabase(HURDAT2)1851-2018.txt"
+filename = input("Enter file to be converted: ")
+#filename = "AtlanticHurricaneDatabase(HURDAT2)1851-2018.txt"
+#filename = "NortheastAndNorthCentralPacificHurricaneDatabase(HURDAT2)1949-2018.txt"
 print("processing " + filename + " . . .")
 
 #create a 2D-array from the imported dataset.

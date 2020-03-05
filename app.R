@@ -8,8 +8,9 @@ library(grid)
 library(leaflet)
 library(scales)
 library(dplyr)
+library(plyr)
 
-#note: the data file to be read here needs to be processed by out Python script first.
+#note: the data file to be read here needs to be processed by our Python script first.
 
 #read in datafile
 data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
@@ -22,8 +23,10 @@ data1year <- data[year(data$date)==2018,]  # | year(data$date)<=2011,]
 #getting data from 2005 and onwards
 data2 <- data[year(data$date)>=2005,]
 
+#select columns
+data2 <- data2[c(0:2, 4:11)]
 
-#getting code and name of hurricanes, saving max windspeed of hurrican from 2005 and onwards
+#getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
 data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize(max_speed =max(max_speed))
 data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
 
@@ -44,9 +47,9 @@ ui <- dashboardPage(
 
   # < INPUT FROM USER >:
   
-    selectInput("hurrYear","Hurrican By Year",append("All",seq(data5[1],data5[2],by=1) )),
-    selectInput("hurrName","Hurrican Name",append("All",as.character(data3$hur_code)) ),
-    selectInput("hurrTop","Hurrican Top 10",append("All",as.character(data4$hur_code)) )
+    selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
+    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) )
   ),
   
   #Body
@@ -56,24 +59,26 @@ ui <- dashboardPage(
     fluidRow(
       
       #left column
-      column(8,
-             # < LEAFLET >:
-             box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
-                 leafletOutput("leaf", height = 1000)
-             ),
-             # < TABLE OF HURRICANES SINCE 2005 >:
-             box(title="Atlantic Hurricanes", solidHeader = TRUE, status="primary", width=12,
-                 dataTableOutput("atlanticData", height=400)
-             )
 
-      ),
-      #middle coulumn
-      column(2,
-             # < sEARCH BY DAY >:
+      column(10,
+              # < LEAFLET >:
+               box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
+                   leafletOutput("leaf", height = 600)
+               ),
+             
+             # < TABLE OF HURRICANES SINCE 2005 >:
+               box(title="Hurricane List", solidHeader = TRUE, status="primary", width=12,
+                   dataTableOutput("hurrTable", height=400)
+               )
              
       ),
+      #middle coulumn
+      column(1,
+              # < sEARCH BY DAY >:
+      ),
       #right column (tables)  - amber this is the first part
-      column(2,
+      column(1,
+
              
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
@@ -92,20 +97,42 @@ server <- function(input, output) {
   
   # increase the default font size
   theme_set(theme_grey(base_size = 18) )
-  tableOne = data2[year(data2$date) == 2018,];
-  hurrYearR <- reactive(
-    if(input$hurrYear == "All"){
-      tableOne = data2 
+  filter <- reactive(
+    if(input$hurrYear == "All" & input$hurrName == "All"){
+      data2
+    }
+    else if (input$hurrName == "All"){  #filter by year:
+      data2[year(data2$date)==input$hurrYear,]
+    }
+    else if (input$hurrYear == "All"){  #filter by name:
+      data2[data2$hur_name==input$hurrName,]
+    }
+    else{
+      data2[year(data2$date)==input$hurrYear & data2$hur_name==input$hurrName,]
     }
   )
-  hurrNameR <- reactive(
-    if(input$hurrName == "All"){
-      tableOne = data2 
-    }
-  )
+  
+  # hurrYearR <- reactive(
+  #   if(input$hurrYear == "All"){
+  #      data2
+  #   }
+  #   else{
+  #      data2[year(data2$date)==input$hurrYear,]
+  #   }
+  # )
+  # 
+  # hurrNameR <- reactive(
+  #   if(input$hurrName == "All"){
+  #      data2 
+  #   }
+  #   else{
+  #      data2[data2$hur_code==input$hurrName,]
+  #   }
+  # )
+  
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
-      tableOne = data2 
+       data2 
     }
   )
   
@@ -127,38 +154,50 @@ server <- function(input, output) {
   
   # add a leaflet map of the atlantic
   output$leaf <- renderLeaflet({
+    
+    reactData <- filter()   #filter data
+    
     map <- leaflet()
     map <- addTiles(map)
-    map <- setView(map, lng = -35.947, lat = 39.121, zoom = 3)
+    map <- setView(map, lng = -35.9, lat = 39.1, zoom = 3)
     map <- addCircles(map, 
-                      lng = data1year$lon, lat = data1year$lat, 
-                      color = pal(data1year$max_speed), 
-                      weight = data1year$max_speed / 4,    #1->5   2->20   3->40
-                      #label = paste("(", data1year$lat, ",", data1year$lon, ")") #concat
-                      label = paste(data1year$max_speed, " knots, ", data1year$min_pressure, " millibars, on",
-                                    month(data1year$date), "/", day(data1year$date), "/", year(data1year$date), " @ ", data1year$time
+                      lng = reactData$lon, lat = reactData$lat, 
+                      color = pal(reactData$max_speed), 
+                      weight = reactData$max_speed / 4,    #1->5   2->20   3->40
+                      label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " millibars, on",
+                                    month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time
                                     ), #concat
                       labelOptions = labelOptions(textOnly = TRUE, direction = "top")
     )
     # map <-   addPolylines(
     #                   map,
-    #                   data = data1year,
-    #                   lng = data1year$lon, 
-    #                   lat = data1year$lat,
+    #                   data = reactData,
+    #                   lng = reactData$lon, 
+    #                   lat = reactData$lat,
     #                   weight = 3,
     #                   opacity = 3
     #) 
     map
   })
-  output$atlanticData <- renderDT(
-    tableOne
-  )
+  
+    
+    output$hurrTable <- DT::renderDataTable(
+      DT::datatable({
+        filter()
+      },
+      options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
+      ), rownames = FALSE
+      )
+    )
+    
+    
+    
+  
 
   
   
-  output$atlanticData <- renderDT(
-    tableOne
-  )
+  # output$atlanticData <- renderDT(
+  #     )
   
   
   
