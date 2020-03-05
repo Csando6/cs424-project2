@@ -26,7 +26,9 @@ data2 <- data[year(data$date) >= 2005,]
 #data2 <- data2[c(0:2, 4:11)]
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
+#data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
+dataT <- data2[,c(1,2,10)]
+data3 <- aggregate(. ~hur_code+hur_name, dataT, max)
 data3 <- data3[order(data3$hur_name, decreasing = FALSE),]
 
 #getting top 10 hurrican speed
