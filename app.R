@@ -53,7 +53,7 @@ ui <- dashboardPage(
   
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
     selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) ),
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) )
     #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL)
 
   ),
@@ -112,17 +112,20 @@ server <- function(input, output) {
 
   theme_set(theme_grey(base_size = 18) )
   filter <- reactive(
-    dataCol = data2[c(0:2, 4:11)] #select only some columns
     if(input$hurrYear == "All" & input$hurrName == "All"){
+      dataCol = data2[c(0:2, 4:11)] #select only some columns
       dataCol
     }
     else if (input$hurrName == "All"){  #filter by year:
+      dataCol = data2[c(0:2, 4:11)] #select only some columns
       dataCol[year(dataCol$date)==input$hurrYear,]
     }
     else if (input$hurrYear == "All"){  #filter by name:
+      dataCol = data2[c(0:2, 4:11)] #select only some columns
       dataCol[dataCol$hur_name==input$hurrName,]
     }
     else{
+      dataCol = data2[c(0:2, 4:11)] #select only some columns
       dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName,]
     }
   )
