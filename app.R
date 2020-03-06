@@ -115,27 +115,25 @@ server <- function(input, output) {
 
   theme_set(theme_grey(base_size = 18) )
   filter <- reactive(
-    if(input$hurrYear == "All" & input$hurrName == "All"){
+    if(input$hurrYear == "All" & input$hurrName == "All" & input$hurrTop == "All"){
       dataCol = data2[c(0:2, 4:11,24)] #select only some columns
       dataCol
     }
-    else if (input$hurrName == "All"){  #filter by year:
+    else if (input$hurrYear != "All"){  #filter by year:
       dataCol = data2[c(0:2, 4:11,24)] #select only some columns
       dataCol[year(dataCol$date)==input$hurrYear,]
     }
-    else if (input$hurrYear == "All"){  #filter by name:
+    else if (input$hurrName != "All"){  #filter by name:
       dataCol = data2[c(0:2, 4:11,24)] #select only some columns
       dataCol[dataCol$name==input$hurrName,]
     }
-    else{
+    else if(input$hurrTop != "All"){
       dataCol = data2[c(0:2, 4:11,24)] #select only some columns
       dataCol[dataCol$name==input$hurrTop,]
     }
   )
 
- 
 
-  
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
        data2 
