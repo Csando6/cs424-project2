@@ -17,25 +17,27 @@ data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 
 #getting data from 2018 and onwards
-data1year <- data[year(data$date)==2018,]  # | year(data$date)<=2011,]
+data1year <- data[year(data$date) == 2018,] # | year(data$date)<=2011,]
 #data1year <- data1year[seq(1, nrow(data1year), 2), ]  #get every other point
 
 #getting data from 2005 and onwards
-data2 <- data[year(data$date)>=2005,]
+data2 <- data[year(data$date) >= 2005,]
 
 #select columns
-data2 <- data2[c(0:2, 4:11)]
+#data2 <- data2[c(0:2, 4:11)]
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
+#data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
+dataT <- data2[,c(1,2,10)]
+data3 <- aggregate(. ~hur_code+hur_name, dataT, max)
+data3 <- data3[order(data3$hur_name, decreasing = FALSE),]
 
-data3 <- data2 %>% group_by(hur_code,hur_name) %>% summarize()
-data3 <- data3[order(data3$hur_name,decreasing = FALSE),]
 
-#getting top 10 hurrican speed
+#getting top 10 hurricane speed
 data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
 data4 <- data4[1:10,]
 
-#range of hurrican data
+#range of hurricane data
 data5 <- range(year(data2$date))
 
 #SHINY DASHBOARD
@@ -46,22 +48,25 @@ ui <- dashboardPage(
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
 
 
+
   # < INPUT FROM USER >:
   
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
     selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
     selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) ),
-    checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL)
+    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL)
+
   ),
-  
-  #Body
+
+#Body
   dashboardBody(
-    
-    # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
+
+# APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
+    
+      
       
       #left column
-
       column(10,
               # < LEAFLET >:
                box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
@@ -74,6 +79,7 @@ ui <- dashboardPage(
                )
              
       ),
+      
       #middle coulumn
       column(1,
               # < sEARCH BY DAY >:
@@ -85,75 +91,68 @@ ui <- dashboardPage(
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
              # < ABOUT >:
+
       )
-      
-      
-      
+
+
+
     ) #end major fluidRow
-    
-    # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+# application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
 #added a comment here for no reason
 
 server <- function(input, output) {
-  
+
+
+  #data1year <- data[year(data$date)==2018 | year(data$date)<=2011,]
+
+
   # increase the default font size
+
   theme_set(theme_grey(base_size = 18) )
   filter <- reactive(
+    dataCol = data2[c(0:2, 4:11)] #select only some columns
     if(input$hurrYear == "All" & input$hurrName == "All"){
-      data2
+      dataCol
     }
     else if (input$hurrName == "All"){  #filter by year:
-      data2[year(data2$date)==input$hurrYear,]
+      dataCol[year(dataCol$date)==input$hurrYear,]
     }
     else if (input$hurrYear == "All"){  #filter by name:
-      data2[data2$hur_name==input$hurrName,]
+      dataCol[dataCol$hur_name==input$hurrName,]
     }
     else{
-      data2[year(data2$date)==input$hurrYear & data2$hur_name==input$hurrName,]
+      dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName,]
     }
   )
-  
-  # hurrYearR <- reactive(
-  #   if(input$hurrYear == "All"){
-  #      data2
-  #   }
-  #   else{
-  #      data2[year(data2$date)==input$hurrYear,]
-  #   }
-  # )
-  # 
-  # hurrNameR <- reactive(
-  #   if(input$hurrName == "All"){
-  #      data2 
-  #   }
-  #   else{
-  #      data2[data2$hur_code==input$hurrName,]
-  #   }
-  # )
+
+ 
+
   
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
        data2 
+
     }
   )
-  
+
   #REACTIVE DATA HERE
-  
-  
+
+
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-  
-  
-  
+
+
+
   # Create a continuous palette function (from leaflet documentation)
   pal <- colorNumeric(
     palette = "Reds",
     domain = data1year$max_speed)
-  
-  square <- function(x){
-    return(x*x)
+
+  square <- function(x) {
+    return(x * x)
   }
-  
+
   # add a leaflet map of the atlantic
   output$leaf <- renderLeaflet({
     
@@ -168,6 +167,7 @@ server <- function(input, output) {
                       weight = reactData$max_speed / 4,    #1->5   2->20   3->40
                       label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " millibars, on",
                                     month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time
+
                                     ), #concat
                       labelOptions = labelOptions(textOnly = TRUE, direction = "top")
     )
@@ -194,25 +194,18 @@ server <- function(input, output) {
     
    # output$value <- renderText({ input$somevalue })
     
-    
-    
+   
+  
+  
+  
   
 
-  
-  
-  # output$atlanticData <- renderDT(
-  #     )
-  
-  
-  
-  
-  
   #amber: this is the other part
-  
-  
-  
+
+
+
   #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  
+
 }
 
 shinyApp(ui = ui, server = server)
