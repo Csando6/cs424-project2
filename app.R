@@ -23,14 +23,17 @@ data1year <- data[year(data$date) == 2018,] # | year(data$date)<=2011,]
 #getting data from 2005 and onwards
 data2 <- data[year(data$date) >= 2005,]
 
+#creating meaningful name for hurricanes
+data2$name <- paste(data2$hur_name,year(data2$date),sep="-")
+
 #select columns
 #data2 <- data2[c(0:2, 4:11)]
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
 #data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
-dataT <- data2[,c(1,2,10)]
-data3 <- aggregate(. ~hur_code+hur_name, dataT, max)
-data3 <- data3[order(data3$hur_name, decreasing = FALSE),]
+dataT <- data2[,c("name","max_speed")]
+data3 <- aggregate(. ~name, dataT, max)
+data3 <- data3[order(data3$name, decreasing = FALSE),]
 
 
 #getting top 10 hurricane speed
@@ -52,8 +55,8 @@ ui <- dashboardPage(
   # < INPUT FROM USER >:
   
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) )
+    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$name)) ),
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$name)) )
     #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL)
 
   ),
@@ -113,20 +116,20 @@ server <- function(input, output) {
   theme_set(theme_grey(base_size = 18) )
   filter <- reactive(
     if(input$hurrYear == "All" & input$hurrName == "All"){
-      dataCol = data2[c(0:2, 4:11)] #select only some columns
+      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
       dataCol
     }
     else if (input$hurrName == "All"){  #filter by year:
-      dataCol = data2[c(0:2, 4:11)] #select only some columns
+      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
       dataCol[year(dataCol$date)==input$hurrYear,]
     }
     else if (input$hurrYear == "All"){  #filter by name:
-      dataCol = data2[c(0:2, 4:11)] #select only some columns
-      dataCol[dataCol$hur_name==input$hurrName,]
+      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
+      dataCol[dataCol$name==input$hurrName,]
     }
     else{
-      dataCol = data2[c(0:2, 4:11)] #select only some columns
-      dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName,]
+      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
+      dataCol[dataCol$name==input$hurrTop,]
     }
   )
 
