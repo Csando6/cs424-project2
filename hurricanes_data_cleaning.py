@@ -69,5 +69,5 @@ dataframe = pd.DataFrame.from_records(data, columns=custom_header)
 
 
 #export dataframe to csv:
-dataframe.to_csv('cleaned_hurricane_data.csv', index=False)
+dataframe.to_csv(filename[0:15]+"-cleaned.csv", index=False)
 print("csv generated.")
