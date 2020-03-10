@@ -12,17 +12,17 @@ library(plyr)
 
 #note: the data file to be read here needs to be processed by our Python script first.
 
-#read in datafile
-data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
+#read in datafile from 
+data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 
-cat("printing")
+#cat("printing")
 
 #getting data from 2005 and onwards
 data2 <- data[year(data$date) >= 2005,]
 
 
-dataCol = data2[c(0:2, 4:11)] #select only some columns
+#dataCol = data2[c(0:2, 4:11)] #select only some columns
 #creating meaningful name for hurricanes
 data2$name <- paste(data2$hur_name,year(data2$date),sep="-")
 
@@ -34,7 +34,6 @@ data2$name <- paste(data2$hur_name,year(data2$date),sep="-")
 dataT <- data2[,c("name","max_speed")]
 data3 <- aggregate(. ~name, dataT, max)
 data3 <- data3[order(data3$name, decreasing = FALSE),]
-
 
 #getting top 10 hurricane speed
 data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
@@ -52,11 +51,10 @@ ui <- dashboardPage(
     # < INPUT FROM USER >:
     
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) ),
+    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$name)) ),
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$name)) ),
     #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
     checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
-    
     radioButtons("hurrSpan", "Filter Year Range", 
                 choices = c("Show Hurricanes Since 2005" = "span2005",
                             "Show All Hurricanes" = "spanAll"),
@@ -116,17 +114,21 @@ server <- function(input, output) {
   
   #filter by year and name:
   filter <- reactive(
-    if(input$hurrYear == "All" & input$hurrName == "All"){
+    if(input$hurrYear == "All" & input$hurrName == "All" & input$hurrTop == "All"){
+      dataCol = data2[c(0:2, 4:11,24)]
       dataCol
     }
-    else if (input$hurrName == "All"){  #filter by year:
+    else if (input$hurrYear != "All"){  #filter by year:
+      dataCol = data2[c(0:2, 4:11,24)]
       dataCol[year(dataCol$date)==input$hurrYear,]
     }
-    else if (input$hurrYear == "All"){  #filter by name:
-      dataCol[dataCol$hur_name==input$hurrName,]
+    else if (input$hurrName != "All"){  #filter by name:
+      dataCol = data2[c(0:2, 4:11,24)]
+      dataCol[dataCol$name==input$hurrName,]
     }
-    else{
-      dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName,]
+    else if(input$hurrTop != "All"){
+      dataCol = data2[c(0:2, 4:11,24)]
+      dataCol[dataCol$name==input$hurrTop,]
     }
   )
   
