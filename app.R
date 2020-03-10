@@ -21,17 +21,13 @@ cat("printing")
 #getting data from 2005 and onwards
 data2 <- data[year(data$date) >= 2005,]
 
-<<<<<<< HEAD
 
 dataCol = data2[c(0:2, 4:11)] #select only some columns
-
-=======
 #creating meaningful name for hurricanes
 data2$name <- paste(data2$hur_name,year(data2$date),sep="-")
 
 #select columns
 #data2 <- data2[c(0:2, 4:11)]
->>>>>>> 3daf00edc8cc32db99eec94cb153499193997996
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
 #data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
@@ -52,35 +48,19 @@ data5 <- range(year(data2$date))
 # Create the shiny dashboard
 ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
-  dashboardSidebar(disable = FALSE, collapsed = FALSE,
-<<<<<<< HEAD
-                   
-                   
-                   
-                   # < INPUT FROM USER >:
-                   
-                   selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
-                   selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
-                   selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) ),
-                   #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
-                   checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
-                   
-                   radioButtons("hurrSpan", "Filter Year Range", 
-                                choices = c("Show Hurricanes Since 2005" = "span2005",
-                                            "Show All Hurricanes" = "spanAll"),
-                                selected = NULL, inline = FALSE, width = NULL)
-=======
-
-
-
-  # < INPUT FROM USER >:
-  
+  dashboardSidebar(disable = FALSE, collapsed = FALSE,        
+    # < INPUT FROM USER >:
+    
     selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$name)) )
-    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL)
-
->>>>>>> 3daf00edc8cc32db99eec94cb153499193997996
+    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$hur_name)) ),
+    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$hur_code)) ),
+    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
+    checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
+    
+    radioButtons("hurrSpan", "Filter Year Range", 
+                choices = c("Show Hurricanes Since 2005" = "span2005",
+                            "Show All Hurricanes" = "spanAll"),
+                selected = NULL, inline = FALSE, width = NULL)
   ),
   
   #Body
@@ -136,7 +116,6 @@ server <- function(input, output) {
   
   #filter by year and name:
   filter <- reactive(
-<<<<<<< HEAD
     if(input$hurrYear == "All" & input$hurrName == "All"){
       dataCol
     }
@@ -172,27 +151,6 @@ server <- function(input, output) {
   
   
   #top10 list
-=======
-    if(input$hurrYear == "All" & input$hurrName == "All" & input$hurrTop == "All"){
-      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
-      dataCol
-    }
-    else if (input$hurrYear != "All"){  #filter by year:
-      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
-      dataCol[year(dataCol$date)==input$hurrYear,]
-    }
-    else if (input$hurrName != "All"){  #filter by name:
-      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
-      dataCol[dataCol$name==input$hurrName,]
-    }
-    else if(input$hurrTop != "All"){
-      dataCol = data2[c(0:2, 4:11,24)] #select only some columns
-      dataCol[dataCol$name==input$hurrTop,]
-    }
-  )
-
-
->>>>>>> 3daf00edc8cc32db99eec94cb153499193997996
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
       data2 
