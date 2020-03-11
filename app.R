@@ -35,6 +35,16 @@ dataT <- data2[,c("name","max_speed")]
 data3 <- aggregate(. ~name, dataT, max)
 data3 <- data3[order(data3$name, decreasing = FALSE),]
 
+#add a category column to data3:
+data3$category[data3$max_speed <= 33] <- 'TD'
+data3$category[data3$max_speed >= 34 & data3$max_speed <= 63] <- 'TS'
+data3$category[data3$max_speed >= 64 & data3$max_speed <= 82] <- '1'
+data3$category[data3$max_speed >= 83 & data3$max_speed <= 95] <- '2'
+data3$category[data3$max_speed >= 96 & data3$max_speed <= 112] <- '3'
+data3$category[data3$max_speed >= 113 & data3$max_speed <= 136] <- '4'
+data3$category[data3$max_speed >= 137] <- '5'
+
+
 #getting top 10 hurricane speed
 data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
 data4 <- data4[1:10,]
