@@ -12,63 +12,64 @@ library(plyr)
 
 #note: the data file to be read here needs to be processed by our Python script first.
 
-#read in datafile from 
-data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
+#read in datafile
+data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 
-#cat("printing")
+cat("printing")
 
 #getting data from 2005 and onwards
-data2 <- data[year(data$date) >= 2005,]
+data2005 <- data[year(data$date) >= 2005,]
 
 
-#dataCol = data2[c(0:2, 4:11)] #select only some columns
-#creating meaningful name for hurricanes
-data2$name <- paste(data2$hur_name,year(data2$date),sep="-")
+dataCol2005 = data2005[c(0:2, 4:11)] #select only some columns
 
-#select columns
-#data2 <- data2[c(0:2, 4:11)]
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-#data3 <- data2 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
-dataT <- data2[,c("name","max_speed")]
-data3 <- aggregate(. ~name, dataT, max)
-data3 <- data3[order(data3$name, decreasing = FALSE),]
+#hurMaxSpeed <- data2005 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
+dataT <- data2005[,c(1,2,10)]
+hurMaxSpeed <- aggregate(. ~hur_code+hur_name, dataT, max)
+hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
 
-#add a category column to data3:
-data3$category[data3$max_speed <= 33] <- 'TD'
-data3$category[data3$max_speed >= 34 & data3$max_speed <= 63] <- 'TS'
-data3$category[data3$max_speed >= 64 & data3$max_speed <= 82] <- '1'
-data3$category[data3$max_speed >= 83 & data3$max_speed <= 95] <- '2'
-data3$category[data3$max_speed >= 96 & data3$max_speed <= 112] <- '3'
-data3$category[data3$max_speed >= 113 & data3$max_speed <= 136] <- '4'
-data3$category[data3$max_speed >= 137] <- '5'
+
+#add a category column to hurMaxSpeed:
+hurMaxSpeed$category[hurMaxSpeed$max_speed <= 33] <- 'TD'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 34 & hurMaxSpeed$max_speed <= 63] <- 'TS'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 64 & hurMaxSpeed$max_speed <= 82] <- '1'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 83 & hurMaxSpeed$max_speed <= 95] <- '2'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112] <- '3'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
 
 
 #getting top 10 hurricane speed
-data4 <- data3[order(data3$max_speed, decreasing = TRUE),]
-data4 <- data4[1:10,]
+hurTop10 <- hurMaxSpeed[order(hurMaxSpeed$max_speed, decreasing = TRUE),]
+hurTop10 <- hurTop10[1:10,]
 
 #range of hurricane data
-data5 <- range(year(data2$date))
+dataRange2005 <- range(year(data2005$date))
 
 #SHINY DASHBOARD
 
 # Create the shiny dashboard
 ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
-  dashboardSidebar(disable = FALSE, collapsed = FALSE,        
-    # < INPUT FROM USER >:
-    
-    selectInput("hurrYear","Hurricane By Year",append("All",seq(data5[1],data5[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(data3$name)) ),
-    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(data4$name)) ),
-    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
-    checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
-    radioButtons("hurrSpan", "Filter Year Range", 
-                choices = c("Show Hurricanes Since 2005" = "span2005",
-                            "Show All Hurricanes" = "spanAll"),
-                selected = NULL, inline = FALSE, width = NULL)
+  dashboardSidebar(disable = FALSE, collapsed = FALSE,
+                   
+                   
+                   
+                   # < INPUT FROM USER >:
+                   
+                   selectInput("hurrYear","Hurricane By Year",append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+                   selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)) ),
+                   selectInput("hurrTop","Hurricane Top 10",append("All",as.character(hurTop10$hur_code)) ),
+                   #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
+                   checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
+                   
+                   radioButtons("hurrSpan", "Filter Year Range", 
+                                choices = c("Show Hurricanes Since 2005" = "span2005",
+                                            "Show All Hurricanes" = "spanAll"),
+                                selected = NULL, inline = FALSE, width = NULL)
   ),
   
   #Body
@@ -124,21 +125,17 @@ server <- function(input, output) {
   
   #filter by year and name:
   filter <- reactive(
-    if(input$hurrYear == "All" & input$hurrName == "All" & input$hurrTop == "All"){
-      dataCol = data2[c(0:2, 4:11,24)]
-      dataCol
+    if(input$hurrYear == "All" & input$hurrName == "All"){
+      dataCol2005
     }
-    else if (input$hurrYear != "All"){  #filter by year:
-      dataCol = data2[c(0:2, 4:11,24)]
-      dataCol[year(dataCol$date)==input$hurrYear,]
+    else if (input$hurrName == "All"){  #filter by year:
+      dataCol2005[year(dataCol2005$date)==input$hurrYear,]
     }
-    else if (input$hurrName != "All"){  #filter by name:
-      dataCol = data2[c(0:2, 4:11,24)]
-      dataCol[dataCol$name==input$hurrName,]
+    else if (input$hurrYear == "All"){  #filter by name:
+      dataCol2005[dataCol2005$hur_name==input$hurrName,]
     }
-    else if(input$hurrTop != "All"){
-      dataCol = data2[c(0:2, 4:11,24)]
-      dataCol[dataCol$name==input$hurrTop,]
+    else{
+      dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName,]
     }
   )
   
@@ -146,14 +143,14 @@ server <- function(input, output) {
   
   
   #filterByLandfall:
-    filterByLandfall <- reactive(
-      if(input$landfallCheckbox == TRUE){
-        df[df$record_id == 'L',] #return only records with landfall
-      }
-      else{
-        df   #return all records
-      }
-    )
+  filterByLandfall <- reactive(
+    if(input$landfallCheckbox == TRUE){
+      df[df$record_id == 'L',] #return only records with landfall
+    }
+    else{
+      df   #return all records
+    }
+  )
   
   
   observeEvent(input$landfallCheckbox,
@@ -165,7 +162,7 @@ server <- function(input, output) {
   #top10 list
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
-      data2 
+      data2005 
       
     }
   )
@@ -176,7 +173,7 @@ server <- function(input, output) {
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
   
-
+  
   square <- function(x) {
     return(x * x)
   }
