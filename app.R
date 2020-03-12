@@ -22,10 +22,11 @@ data2$date <- ymd(data2$date)
 data2$type <- "N"
 
 data <- rbind(data,data2)
+data[is.na(data$hur_name),]="UNNAMED"
 
 
 #getting data from 2005 and onwards
-data2005 <- data[year(data$date) >= 2005,]
+data2005 <- data #[year(data$date) >= 2005,]
 
 #select only some columns
 dataCol2005 = data2005[c(0:2, 4:11)] 
@@ -58,9 +59,9 @@ ui <- dashboardPage(
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
                    # < INPUT FROM USER >:
-                   selectInput("hurrYear","Hurricane By Year",append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-                   selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)) ),
-                   selectInput("hurrTop","Hurricane Top 10",append("All",as.character(hurTop10$hur_code)) ),
+                   selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+                   selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+                   selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
                    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
                    checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
                    
@@ -106,7 +107,7 @@ ui <- dashboardPage(
   ))
 #added a comment here for no reason
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   
   # increase the default font size
@@ -115,27 +116,44 @@ server <- function(input, output) {
   
   #filter by year and name:
   filter <- reactive(
-    if(input$hurrYear == "All" & input$hurrName == "All"){
+    #user selected hurricane, show hurricane on map
+    if(input$hurrTop != "All" & input$hurrTop != ""){
+      updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+      updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+      dataCol2005[dataCol2005$hur_code==input$hurrTop,]
+    }
+    #user selected All, show all hurricane
+    else if(input$hurrTop == "All" & input$hurrTop!=""){
+      updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+      updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+      dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code,]
+    }
+    #user selected hurrYear = All and hurrName = "All"
+    else if(input$hurrYear == "All" & input$hurrName == "All"){
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
       dataCol2005
     }
-    else if (input$hurrName == "All"){  #filter by year:
-      dataCol2005[year(dataCol2005$date)==input$hurrYear,]
+    #user selected hurrName = All, hurrYear to a year
+    else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+      
+      dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear,]
+      #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+      dataYear
     }
-    else if (input$hurrYear == "All"){  #filter by name:
+    #user selected hurrName to a name, hurrYear = All
+    else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+      #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
       dataCol2005[dataCol2005$hur_name==input$hurrName,]
     }
+    #user selected hurrName to a name, hurrYear to a year
     else{
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
       dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName,]
     }
   )
-  filterTop10 <- reactive(
-    if(input$hurrTop == "All"){
-      dataCol2005
-    }
-    else{
-      dataCol2005[dataCol2005$hur_name==input$hurrName,]
-    }
-  )
+  
   
   #filterByLandfall:
   filterByLandfall <- reactive(
@@ -169,13 +187,11 @@ server <- function(input, output) {
     
     #get reactive data:
     reactData <- filter()   #filter data
-    #reactData <- filterByLandfall(reactData)
-    
     
     # Create a continuous palette function (from leaflet documentation)
-  pal <- colorNumeric(
+    pal <- colorNumeric(
     palette = "Reds",
-    domain = reactData$max_speed)
+      domain = reactData$max_speed)
     
     map <- leaflet()
     map <- addTiles(map)
@@ -187,17 +203,9 @@ server <- function(input, output) {
                       label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " millibars, on",
                                     month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time
                                     
-                      ), #concat
+                      ),
                       labelOptions = labelOptions(textOnly = TRUE, direction = "top")
     )
-    # map <-   addPolylines(
-    #                   map,
-    #                   data = reactData,
-    #                   lng = reactData$lon, 
-    #                   lat = reactData$lat,
-    #                   weight = 3,
-    #                   opacity = 3
-    #) 
     map
   })
   
