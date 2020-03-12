@@ -13,24 +13,27 @@ library(plyr)
 #note: the data file to be read here needs to be processed by our Python script first.
 
 #read in datafile
-data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
+data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
+data$type <- "A"
 
-cat("printing")
+data2 <- read.csv(file="NortheastAndNor-cleaned.csv", sep=",", header=TRUE)
+data2$date <- ymd(data2$date)
+data2$type <- "N"
+
+data <- rbind(data,data2)
+
 
 #getting data from 2005 and onwards
 data2005 <- data[year(data$date) >= 2005,]
 
-
-dataCol2005 = data2005[c(0:2, 4:11)] #select only some columns
-
+#select only some columns
+dataCol2005 = data2005[c(0:2, 4:11)] 
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-#hurMaxSpeed <- data2005 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
 dataT <- data2005[,c(1,2,10)]
 hurMaxSpeed <- aggregate(. ~hur_code+hur_name, dataT, max)
 hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
-
 
 #add a category column to hurMaxSpeed:
 hurMaxSpeed$category[hurMaxSpeed$max_speed <= 33] <- 'TD'
@@ -41,7 +44,6 @@ hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112]
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
 
-
 #getting top 10 hurricane speed
 hurTop10 <- hurMaxSpeed[order(hurMaxSpeed$max_speed, decreasing = TRUE),]
 hurTop10 <- hurTop10[1:10,]
@@ -50,16 +52,12 @@ hurTop10 <- hurTop10[1:10,]
 dataRange2005 <- range(year(data2005$date))
 
 #SHINY DASHBOARD
-
 # Create the shiny dashboard
 ui <- dashboardPage(
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
-                   
-                   
                    # < INPUT FROM USER >:
-                   
                    selectInput("hurrYear","Hurricane By Year",append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
                    selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)) ),
                    selectInput("hurrTop","Hurricane Top 10",append("All",as.character(hurTop10$hur_code)) ),
@@ -71,14 +69,10 @@ ui <- dashboardPage(
                                             "Show All Hurricanes" = "spanAll"),
                                 selected = NULL, inline = FALSE, width = NULL)
   ),
-  
   #Body
   dashboardBody(
-    
     # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
-      
-      
       
       #left column
       column(10,
@@ -86,12 +80,10 @@ ui <- dashboardPage(
              box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                  leafletOutput("leaf", height = 600)
              ),
-             
              # < TABLE OF HURRICANES SINCE 2005 >:
              box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
                  dataTableOutput("hurrTable", height=400)
              )
-             
       ),
       
       #middle coulumn
@@ -100,8 +92,6 @@ ui <- dashboardPage(
       ),
       #right column (tables)  - amber this is the first part
       column(1,
-             
-             
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
              # < ABOUT >:
@@ -138,9 +128,14 @@ server <- function(input, output) {
       dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName,]
     }
   )
-  
-  
-  
+  filterTop10 <- reactive(
+    if(input$hurrTop == "All"){
+      dataCol2005
+    }
+    else{
+      dataCol2005[dataCol2005$hur_name==input$hurrName,]
+    }
+  )
   
   #filterByLandfall:
   filterByLandfall <- reactive(
@@ -152,12 +147,8 @@ server <- function(input, output) {
     }
   )
   
-  
   observeEvent(input$landfallCheckbox,
                filterByLandfall())
-  
-  
-  
   
   #top10 list
   hurrTopR <- reactive(
@@ -166,14 +157,9 @@ server <- function(input, output) {
       
     }
   )
-  
   #REACTIVE DATA HERE
   
-  
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-  
-  
-  
   square <- function(x) {
     return(x * x)
   }
@@ -187,9 +173,9 @@ server <- function(input, output) {
     
     
     # Create a continuous palette function (from leaflet documentation)
-    pal <- colorNumeric(
-      palette = "Reds",
-      domain = reactData$max_speed)
+  pal <- colorNumeric(
+    palette = "Reds",
+    domain = reactData$max_speed)
     
     map <- leaflet()
     map <- addTiles(map)
@@ -215,30 +201,20 @@ server <- function(input, output) {
     map
   })
   
-  
   output$hurrTable <- DT::renderDataTable(
     DT::datatable({
       filter()
-    },
-    options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
-    ), rownames = FALSE
+      },
+      options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
+      ), rownames = FALSE
     )
   )
   
   # output$value <- renderText({ input$somevalue })
   
-  
-  
-  
-  
-  
-  
   #amber: this is the other part
-  
-  
   
   #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   
 }
-
 shinyApp(ui = ui, server = server)
