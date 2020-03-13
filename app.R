@@ -13,17 +13,20 @@ library(plyr)
 #note: the data file to be read here needs to be processed by our Python script first.
 
 #read in datafile
+
+#marks data with A to identify it with Atlantic
 data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 data$type <- "A"
 
+#marks data2 with N to identify it with NorthEast
 data2 <- read.csv(file="NortheastAndNor-cleaned.csv", sep=",", header=TRUE)
 data2$date <- ymd(data2$date)
 data2$type <- "N"
 
+#combines both data tables into one
 data <- rbind(data,data2)
-data[is.na(data$hur_name),]="UNNAMED"
-
+#data[is.na(data$hur_name),]="UNNAMED"
 
 #getting data from 2005 and onwards
 data2005 <- data #[year(data$date) >= 2005,]
@@ -84,6 +87,9 @@ ui <- dashboardPage(
              # < TABLE OF HURRICANES SINCE 2005 >:
              box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
                  dataTableOutput("hurrTable", height=400)
+             ),
+             box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
+               plotOutput("maxWindSpeed", height=600)
              )
       ),
       
@@ -165,6 +171,58 @@ server <- function(input, output, session) {
     }
   )
   
+  #creates table for lineGraph of max wind speed
+  filterWindA <- reactive(
+    #get max windspeed per day for specified year
+    if(input$hurrYear != "All" ){
+      maxAtlantic <- data2005[data2005$type=="A" & year(data2005$date)==input$hurrYear,]
+      maxAtlantic <- maxAtlantic[,c("date","max_speed")]
+      maxAtlantic$day <- day(maxAtlantic$date)
+      maxAtlantic$month <- month(maxAtlantic$date)
+      maxAtlantic$year <- year(maxAtlantic$date)
+      maxAtlantic$date <- NULL
+      maxASpeed <- aggregate(. ~year+month+day,maxAtlantic,max)
+      maxASpeed$date <- paste(maxASpeed$year,maxASpeed$month,maxASpeed$day,sep="-") %>% ymd()
+      maxASpeed
+    }
+    #get max windspeed for all years
+    else{
+      maxAtlantic <- data2005[data2005$type=="A",]
+      maxAtlantic <- maxAtlantic[,c("date","max_speed")]
+      maxAtlantic$date <- year(maxAtlantic$date)
+      maxASpeed <- aggregate(. ~date,maxAtlantic,max)
+      maxASpeed
+    }
+  )
+  
+  filterWindN <- reactive(
+    #get max windspeed per day for specified year
+    if(input$hurrYear != "All"){
+      maxNorth <- data2005[data2005$type=="N" & year(data2005$date)==input$hurrYear,]
+      maxNorth <- maxNorth[,c("date","max_speed")]
+      maxNorth$day <- day(maxNorth$date)
+      maxNorth$month <- month(maxNorth$date)
+      maxNorth$year <- year(maxNorth$date)
+      maxNorth$date <- NULL
+      if(nrow(maxNorth)==0 ){
+        maxNSpeed <- data.frame(date = as.Date(character()),
+                                max_speed=integer())
+      }else{
+        maxNSpeed <- aggregate(. ~year+month+day,maxNorth, max)
+        maxNSpeed$date <- paste(maxNSpeed$year,maxNSpeed$month,maxNSpeed$day,sep="-") %>% ymd()
+      }
+      maxNSpeed
+    }
+    #get max windspeed for all years
+    else{
+      maxNorth <- data2005[data2005$type=="N" ,]
+      maxNorth <- maxNorth[,c("date","max_speed")]
+      maxNorth$date <- year(maxNorth$date)
+      maxNSpeed <- aggregate(. ~date,maxNorth, max)
+      maxNSpeed
+    }
+  )
+  
   observeEvent(input$landfallCheckbox,
                filterByLandfall())
   
@@ -217,6 +275,34 @@ server <- function(input, output, session) {
       ), rownames = FALSE
     )
   )
+  
+  output$maxWindSpeed <-renderPlot({
+    maxASpeed <- filterWindA()
+    maxNSpeed <- filterWindN()
+    if(nrow(maxNSpeed) ==0){
+      graph = ggplot() +
+        geom_line(data=maxASpeed, aes(x=date,y=max_speed, colour="Atlantic")) +
+        scale_colour_manual("",
+                            breaks = c("Atlantic"),
+                            values = c("red"))+
+        xlab("Dates")+
+        ylab("Max Wind Speed")+
+        ggtitle(paste("Wind Speed for Year ",input$hurrYear))
+      graph
+    }
+    else{
+      graph = ggplot() +
+        geom_line(data=maxASpeed, aes(x=date,y=max_speed, colour="Atlantic")) +
+        geom_line(data=maxNSpeed, aes(x=date,y=max_speed, colour="North")) +
+        scale_colour_manual("",
+                            breaks = c("Atlantic","North"),
+                            values = c("red","blue"))+
+        xlab("Dates")+
+        ylab("Max Wind Speed")+
+        ggtitle(paste("Wind Speed for Year ",input$hurrYear))
+      graph
+    }
+  })
   
   # output$value <- renderText({ input$somevalue })
   
