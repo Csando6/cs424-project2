@@ -13,17 +13,20 @@ library(plyr)
 #note: the data file to be read here needs to be processed by our Python script first.
 
 #read in datafile
+
+#marks data with A to identify it with Atlantic
 data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 data$type <- "A"
 
+#marks data2 with N to identify it with NorthEast
 data2 <- read.csv(file="NortheastAndNor-cleaned.csv", sep=",", header=TRUE)
 data2$date <- ymd(data2$date)
 data2$type <- "N"
 
+#combines both data tables into one
 data <- rbind(data,data2)
-data[is.na(data$hur_name),]="UNNAMED"
-
+#data[is.na(data$hur_name),]="UNNAMED"
 
 #getting data from 2005 and onwards
 data2005 <- data #[year(data$date) >= 2005,]
@@ -162,6 +165,18 @@ server <- function(input, output, session) {
     }
     else{
       df   #return all records
+    }
+  )
+  
+  #creates table for lineGraph of max wind speed
+  filterLineMaxWind <- reactive(
+    #get max windspeed per day for specified year
+    if(input$hurrYear != "All" || input$hurrYear != ""){
+      
+    }
+    #get max windspeed for all years
+    else{
+      
     }
   )
   
