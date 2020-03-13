@@ -7,30 +7,39 @@ library(jpeg)
 library(grid)
 library(leaflet)
 library(scales)
-library(dplyr)
+library(hashmap)
 library(plyr)
+library(dplyr)
+library(devtools)
+library(dashboardthemes)
+
+source("dark_theme_mod.R")
 
 #note: the data file to be read here needs to be processed by our Python script first.
 
 #read in datafile
-data <- read.csv(file = 'cleaned_hurricane_data.csv', sep = ",", header = TRUE)
+data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
+data$type <- "A"
 
-cat("printing")
+data2 <- read.csv(file="NortheastAndNor-cleaned.csv", sep=",", header=TRUE)
+data2$date <- ymd(data2$date)
+data2$type <- "N"
+
+data <- rbind(data,data2)
+data[is.na(data$hur_name),]="UNNAMED"
+
 
 #getting data from 2005 and onwards
-data2005 <- data[year(data$date) >= 2005,]
+data2005 <- data #[year(data$date) >= 2005,]
 
-
-dataCol2005 = data2005[c(0:2, 4:11)] #select only some columns
-
+#select only some columns
+dataCol2005 = data2005[c(0:2, 4:11)] 
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-#hurMaxSpeed <- data2005 %>% group_by(hur_code, hur_name) %>% summarize(max_speed = max(max_speed))
 dataT <- data2005[,c(1,2,10)]
 hurMaxSpeed <- aggregate(. ~hur_code+hur_name, dataT, max)
 hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
-
 
 #add a category column to hurMaxSpeed:
 hurMaxSpeed$category[hurMaxSpeed$max_speed <= 33] <- 'TD'
@@ -41,7 +50,6 @@ hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112]
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
 
-
 #getting top 10 hurricane speed
 hurTop10 <- hurMaxSpeed[order(hurMaxSpeed$max_speed, decreasing = TRUE),]
 hurTop10 <- hurTop10[1:10,]
@@ -49,36 +57,50 @@ hurTop10 <- hurTop10[1:10,]
 #range of hurricane data
 dataRange2005 <- range(year(data2005$date))
 
-#SHINY DASHBOARD
 
+#Create a mapping between names and renderings, citing:skajah
+mapRenderingsList <- c('Open Topo Map', 'Toner Background', 'World Terrain')
+mapSourcesList <- c(providers$OpenTopoMap, providers$Stamen.TonerBackground, providers$Esri.WorldTerrain)
+mapRenderings <- hashmap(mapRenderingsList, mapSourcesList)
+
+
+#SHINY DASHBOARD
 # Create the shiny dashboard
 ui <- dashboardPage(
+  
+  # skin = "red",
   dashboardHeader(title = "Hurricane Data Analysis"),
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
-                   
-                   
                    # < INPUT FROM USER >:
-                   
-                   selectInput("hurrYear","Hurricane By Year",append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-                   selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)) ),
-                   selectInput("hurrTop","Hurricane Top 10",append("All",as.character(hurTop10$hur_code)) ),
+                   selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+                   selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+                   selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
                    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
                    checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
                    
                    radioButtons("hurrSpan", "Filter Year Range", 
                                 choices = c("Show Hurricanes Since 2005" = "span2005",
                                             "Show All Hurricanes" = "spanAll"),
-                                selected = NULL, inline = FALSE, width = NULL)
+                                selected = NULL, inline = FALSE, width = NULL),
+                   selectInput(inputId="mapRender",
+                               label="Map Rendering",
+                               choices=mapRenderingsList) 
+                  
   ),
-  
   #Body
   dashboardBody(
     
+    ### changing theme
+    # shinyDashboardThemes(
+    #   theme = "grey_dark"
+    # ),
+    # 
+    dark_theme_mod,
+    
+    
     # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
-      
-      
       
       #left column
       column(10,
@@ -86,12 +108,10 @@ ui <- dashboardPage(
              box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                  leafletOutput("leaf", height = 600)
              ),
-             
              # < TABLE OF HURRICANES SINCE 2005 >:
              box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
                  dataTableOutput("hurrTable", height=400)
              )
-             
       ),
       
       #middle coulumn
@@ -100,8 +120,6 @@ ui <- dashboardPage(
       ),
       #right column (tables)  - amber this is the first part
       column(1,
-             
-             
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
              # < ABOUT >:
@@ -116,7 +134,7 @@ ui <- dashboardPage(
   ))
 #added a comment here for no reason
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   
   # increase the default font size
@@ -125,21 +143,43 @@ server <- function(input, output) {
   
   #filter by year and name:
   filter <- reactive(
-    if(input$hurrYear == "All" & input$hurrName == "All"){
+    #user selected hurricane, show hurricane on map
+    if(input$hurrTop != "All" & input$hurrTop != ""){
+      updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+      updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+      dataCol2005[dataCol2005$hur_code==input$hurrTop,]
+    }
+    #user selected All, show all hurricane
+    else if(input$hurrTop == "All" & input$hurrTop!=""){
+      updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+      updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+      dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code,]
+    }
+    #user selected hurrYear = All and hurrName = "All"
+    else if(input$hurrYear == "All" & input$hurrName == "All"){
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
       dataCol2005
     }
-    else if (input$hurrName == "All"){  #filter by year:
-      dataCol2005[year(dataCol2005$date)==input$hurrYear,]
+    #user selected hurrName = All, hurrYear to a year
+    else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+      
+      dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear,]
+      #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+      dataYear
     }
-    else if (input$hurrYear == "All"){  #filter by name:
+    #user selected hurrName to a name, hurrYear = All
+    else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+      #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
       dataCol2005[dataCol2005$hur_name==input$hurrName,]
     }
+    #user selected hurrName to a name, hurrYear to a year
     else{
+      updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
       dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName,]
     }
   )
-  
-  
   
   
   #filterByLandfall:
@@ -152,12 +192,8 @@ server <- function(input, output) {
     }
   )
   
-  
   observeEvent(input$landfallCheckbox,
                filterByLandfall())
-  
-  
-  
   
   #top10 list
   hurrTopR <- reactive(
@@ -166,14 +202,9 @@ server <- function(input, output) {
       
     }
   )
-  
   #REACTIVE DATA HERE
   
-  
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-  
-  
-  
   square <- function(x) {
     return(x * x)
   }
@@ -183,38 +214,39 @@ server <- function(input, output) {
     
     #get reactive data:
     reactData <- filter()   #filter data
-    #reactData <- filterByLandfall(reactData)
-    
     
     # Create a continuous palette function (from leaflet documentation)
     pal <- colorNumeric(
       palette = "Reds",
       domain = reactData$max_speed)
     
-    map <- leaflet()
-    map <- addTiles(map)
-    map <- setView(map, lng = -35.9, lat = 39.1, zoom = 3)
-    map <- addCircles(map, 
-                      lng = reactData$lon, lat = reactData$lat, 
-                      color = pal(reactData$max_speed), 
-                      weight = reactData$max_speed / 4,    #1->5   2->20   3->40
-                      label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " millibars, on",
-                                    month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time
-                                    
-                      ), #concat
-                      labelOptions = labelOptions(textOnly = TRUE, direction = "top")
-    )
-    # map <-   addPolylines(
-    #                   map,
-    #                   data = reactData,
-    #                   lng = reactData$lon, 
-    #                   lat = reactData$lat,
-    #                   weight = 3,
-    #                   opacity = 3
-    #) 
+
+    
+    map <- leaflet(data = reactData) %>%
+          addTiles() %>%
+          addProviderTiles(mapRenderings[[input$mapRender]]) %>%
+          setView(lng = -75.9, lat = 39.1, zoom = 3) %>%
+          addCircles(  
+              lng = reactData$lon, lat = reactData$lat, 
+              color = pal(reactData$max_speed), radius = 2,
+              weight = reactData$max_speed / 3.5,    #1->5   2->20   3->40
+              label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " mbar, on",
+                    month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time
+                            
+              ),
+              labelOptions = labelOptions(textOnly = TRUE, direction = "top",
+                    style = list(
+                      "color" = "black",
+                      # "font-style" = "italic",
+                      "box-shadow" = "3px 3px 3px rgba(0,0,0,1)",
+                      "font-size" = "10px",
+                      "background-color" =  "white"
+                    )
+              )
+          ) 
+    
     map
   })
-  
   
   output$hurrTable <- DT::renderDataTable(
     DT::datatable({
@@ -227,18 +259,9 @@ server <- function(input, output) {
   
   # output$value <- renderText({ input$somevalue })
   
-  
-  
-  
-  
-  
-  
   #amber: this is the other part
-  
-  
   
   #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   
 }
-
 shinyApp(ui = ui, server = server)
