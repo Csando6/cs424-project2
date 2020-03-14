@@ -1,3 +1,9 @@
+#--app.R file for Project 2 of CS 424 - Group 9-------
+#--Amber Little------*********************************
+#--Charly Sandoval---*********************************
+#--Matt Jankowski----*********************************
+#-----------------------------------------------------
+
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
@@ -10,25 +16,29 @@ library(scales)
 library(hashmap)
 library(plyr)
 library(dplyr)
-library(devtools)
-library(dashboardthemes)
+library(devtools)        #for theme
+library(dashboardthemes) #for theme
 
-source("dark_theme_mod.R")
+#IMPORTANT: app.R needs "dark_theme_mod.R" in the same directory to run well with the dark theme:
+source("dark_theme_mod.R") #connect
 
-#note: the data file to be read here needs to be processed by our Python script first.
 
-#read in datafile
+#note: the data file to be read here is first processed by our Python script.
+#READ IN THE DATA FILES:
+
+#marks data with A to identify it with Atlantic
 data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
 data$type <- "A"
 
+#marks data2 with N to identify it with NorthEast
 data2 <- read.csv(file="NortheastAndNor-cleaned.csv", sep=",", header=TRUE)
 data2$date <- ymd(data2$date)
 data2$type <- "N"
 
+#combines both data tables into one
 data <- rbind(data,data2)
-data[is.na(data$hur_name),]="UNNAMED"
-
+#data[is.na(data$hur_name),]="UNNAMED"
 
 #getting data from 2005 and onwards
 data2005 <- data #[year(data$date) >= 2005,]
@@ -50,55 +60,51 @@ hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112]
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
 
-#getting top 10 hurricane speed
+#getting top 10 hurricanes by max speed
 hurTop10 <- hurMaxSpeed[order(hurMaxSpeed$max_speed, decreasing = TRUE),]
 hurTop10 <- hurTop10[1:10,]
 
 #range of hurricane data
 dataRange2005 <- range(year(data2005$date))
 
-
-#Create a mapping between names and renderings, citing:skajah
+#Create a mapping between names and renderings
 mapRenderingsList <- c('Open Topo Map', 'Toner Background', 'World Terrain')
 mapSourcesList <- c(providers$OpenTopoMap, providers$Stamen.TonerBackground, providers$Esri.WorldTerrain)
 mapRenderings <- hashmap(mapRenderingsList, mapSourcesList)
 
 
-#SHINY DASHBOARD
+
+#SHINY DASHBOARD:
 # Create the shiny dashboard
 ui <- dashboardPage(
   
-  # skin = "red",
+  # skin = "red", #use the custom skin theme
+  
   dashboardHeader(title = "Hurricane Data Analysis"),
+  
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
-                   # < INPUT FROM USER >:
-                   selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-                   selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
-                   selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
-                   #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
-                   checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
+     #INPUT FROM USER:
+     selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+     selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+     selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
                    
-                   radioButtons("hurrSpan", "Filter Year Range", 
-                                choices = c("Show Hurricanes Since 2005" = "span2005",
-                                            "Show All Hurricanes" = "spanAll"),
-                                selected = NULL, inline = FALSE, width = NULL),
-                   selectInput(inputId="mapRender",
-                               label="Map Rendering",
-                               choices=mapRenderingsList) 
+     #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
+     checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
+     radioButtons("hurrSpan", "Filter Year Range", 
+                  choices = c("Show Hurricanes Since 2005" = "span2005",
+                              "Show All Hurricanes" = "spanAll"),
+                  selected = NULL, inline = FALSE, width = NULL),
+     selectInput(inputId="mapRender",  #choose map style
+                 label="Map Rendering",
+                 choices=mapRenderingsList) 
                   
   ),
   #Body
   dashboardBody(
-    
-    ### changing theme
-    # shinyDashboardThemes(
-    #   theme = "grey_dark"
-    # ),
-    # 
-    dark_theme_mod,
-    
-    
+   
+    dark_theme_mod,  ### changing theme
+
     # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
       
@@ -111,35 +117,40 @@ ui <- dashboardPage(
              # < TABLE OF HURRICANES SINCE 2005 >:
              box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
                  dataTableOutput("hurrTable", height=400)
+             ),
+             # < MAX SPEED LINE GRAPH >:
+             box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
+               plotOutput("maxWindSpeed", height=600)
              )
       ),
       
       #middle coulumn
       column(1,
-             # < sEARCH BY DAY >:
+             # < SEARCH BY DAY >:
       ),
+      
       #right column (tables)  - amber this is the first part
       column(1,
              # < BAR CHART BY YEAR >:
              # < BAR CHART BY MAX STRENGTH >:
              # < ABOUT >:
              
-      )
-      
-      
+      )      
       
     ) #end major fluidRow
     
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ))
-#added a comment here for no reason
 
+
+# SERVER SIDE:
 server <- function(input, output, session) {
-  
-  
+
   # increase the default font size
-  theme_set(theme_grey(base_size = 18) )
+  theme_set(theme_grey(base_size = 18) ) # ?
   
+  
+  #REACTIVE FUNCTIONS:
   
   #filter by year and name:
   filter <- reactive(
@@ -163,7 +174,6 @@ server <- function(input, output, session) {
     #user selected hurrName = All, hurrYear to a year
     else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
       updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-      
       dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear,]
       #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
       dataYear
@@ -192,6 +202,60 @@ server <- function(input, output, session) {
     }
   )
   
+
+  #creates table for lineGraph of max wind speed
+  filterWindA <- reactive(
+    #get max windspeed per day for specified year
+    if(input$hurrYear != "All" ){
+      maxAtlantic <- data2005[data2005$type=="A" & year(data2005$date)==input$hurrYear,]
+      maxAtlantic <- maxAtlantic[,c("date","max_speed")]
+      maxAtlantic$day <- day(maxAtlantic$date)
+      maxAtlantic$month <- month(maxAtlantic$date)
+      maxAtlantic$year <- year(maxAtlantic$date)
+      maxAtlantic$date <- NULL
+      maxASpeed <- aggregate(. ~year+month+day,maxAtlantic,max)
+      maxASpeed$date <- paste(maxASpeed$year,maxASpeed$month,maxASpeed$day,sep="-") %>% ymd()
+      maxASpeed
+    }
+    #get max windspeed for all years
+    else{
+      maxAtlantic <- data2005[data2005$type=="A",]
+      maxAtlantic <- maxAtlantic[,c("date","max_speed")]
+      maxAtlantic$date <- year(maxAtlantic$date)
+      maxASpeed <- aggregate(. ~date,maxAtlantic,max)
+      maxASpeed
+    }
+  )
+  
+  filterWindN <- reactive(
+    #get max windspeed per day for specified year
+    if(input$hurrYear != "All"){
+      maxNorth <- data2005[data2005$type=="N" & year(data2005$date)==input$hurrYear,]
+      maxNorth <- maxNorth[,c("date","max_speed")]
+      maxNorth$day <- day(maxNorth$date)
+      maxNorth$month <- month(maxNorth$date)
+      maxNorth$year <- year(maxNorth$date)
+      maxNorth$date <- NULL
+      if(nrow(maxNorth)==0 ){
+        maxNSpeed <- data.frame(date = as.Date(character()),
+                                max_speed=integer())
+      }else{
+        maxNSpeed <- aggregate(. ~year+month+day,maxNorth, max)
+        maxNSpeed$date <- paste(maxNSpeed$year,maxNSpeed$month,maxNSpeed$day,sep="-") %>% ymd()
+      }
+      maxNSpeed
+    }
+    #get max windspeed for all years
+    else{
+      maxNorth <- data2005[data2005$type=="N" ,]
+      maxNorth <- maxNorth[,c("date","max_speed")]
+      maxNorth$date <- year(maxNorth$date)
+      maxNSpeed <- aggregate(. ~date,maxNorth, max)
+      maxNSpeed
+    }
+  )
+  
+  #event handler - landfall filter
   observeEvent(input$landfallCheckbox,
                filterByLandfall())
   
@@ -199,17 +263,18 @@ server <- function(input, output, session) {
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
       data2005 
-      
     }
   )
-  #REACTIVE DATA HERE
-  
+    
+  #amber: this is the other part
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-  square <- function(x) {
+
+  square <- function(x) {  #square of a number
     return(x * x)
   }
   
-  # add a leaflet map of the atlantic
+  
+  # add a leaflet map
   output$leaf <- renderLeaflet({
     
     #get reactive data:
@@ -220,8 +285,7 @@ server <- function(input, output, session) {
       palette = "Reds",
       domain = reactData$max_speed)
     
-
-    
+    #map object
     map <- leaflet(data = reactData) %>%
           addTiles() %>%
           addProviderTiles(mapRenderings[[input$mapRender]]) %>%
@@ -231,8 +295,7 @@ server <- function(input, output, session) {
               color = pal(reactData$max_speed), radius = 2,
               weight = reactData$max_speed / 3.5,    #1->5   2->20   3->40
               label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " mbar, on",
-                    month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time
-                            
+                    month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time      
               ),
               labelOptions = labelOptions(textOnly = TRUE, direction = "top",
                     style = list(
@@ -244,22 +307,49 @@ server <- function(input, output, session) {
                     )
               )
           ) 
-    
-    map
+    map   #run map
   })
   
+  #add a table
   output$hurrTable <- DT::renderDataTable(
     DT::datatable({
-      filter()
-    },
-    options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
-    ), rownames = FALSE
+      filter() #use filtered data
+      },
+      options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
+      ), rownames = FALSE
     )
   )
   
-  # output$value <- renderText({ input$somevalue })
+  #add line graph for max wind speed
+  output$maxWindSpeed <-renderPlot({
+    maxASpeed <- filterWindA()
+    maxNSpeed <- filterWindN()
+    if(nrow(maxNSpeed) ==0){
+      graph = ggplot() +
+        geom_line(data=maxASpeed, aes(x=date,y=max_speed, colour="Atlantic")) +
+        scale_colour_manual("",
+                            breaks = c("Atlantic"),
+                            values = c("red"))+
+        xlab("Dates")+
+        ylab("Max Wind Speed")+
+        ggtitle(paste("Wind Speed for Year ",input$hurrYear))
+      graph
+    }
+    else{
+      graph = ggplot() +
+        geom_line(data=maxASpeed, aes(x=date,y=max_speed, colour="Atlantic")) +
+        geom_line(data=maxNSpeed, aes(x=date,y=max_speed, colour="North")) +
+        scale_colour_manual("",
+                            breaks = c("Atlantic","North"),
+                            values = c("red","blue"))+
+        xlab("Dates")+
+        ylab("Max Wind Speed")+
+        ggtitle(paste("Wind Speed for Year ",input$hurrYear))
+      graph
+    }
+  })
   
-  #amber: this is the other part
+  # output$value <- renderText({ input$somevalue })     #text output
   
   #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   
