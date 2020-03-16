@@ -15,12 +15,17 @@ library(leaflet)
 library(scales)
 library(hashmap)
 library(plyr)
-library(dplyr)
+#library(dplyr)
 library(devtools)        #for theme
 library(dashboardthemes) #for theme
+library(hflights)
+library(repurrrsive)
+library(tidyverse)
+library(RColorBrewer)
 
 #IMPORTANT: app.R needs "dark_theme_mod.R" in the same directory to run well with the dark theme:
 source("dark_theme_mod.R") #connect
+
 
 
 #note: the data file to be read here is first processed by our Python script.
@@ -54,17 +59,18 @@ dataT <- data2005[,c(1,2,10)]
 hurMaxSpeed <- aggregate(. ~hur_code+hur_name, dataT, max)
 hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
 
-#Testing Max Speed - Amber 
+#barChartDataing Max Speed - Amber  
 dataQ <- Ambersdata2005[,c(1,2,10,4)] 
-hurMaxSpeed2 <- aggregate(. ~hur_code+hur_name, dataQ, max)
+hurMaxSpeed2 <- aggregate(. ~hur_code+hur_name+year(date), dataQ, max)[0:4]
 hurMaxSpeed2 <- hurMaxSpeed2[order(hurMaxSpeed2$hur_name, decreasing = FALSE),]
+
 
 
 #add a category column to hurMaxSpeed:
 hurMaxSpeed$category[hurMaxSpeed$max_speed <= 33] <- 'TD'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 34 & hurMaxSpeed$max_speed <= 63] <- 'TS'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 64 & hurMaxSpeed$max_speed <= 82] <- '1'
-hurMaxSpeed$category[hurMaxSpeed$max_speed >= 83 & hurMaxSpeed$max_speed <= 95] <- '2'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 83  & hurMaxSpeed$max_speed <= 95] <- '2'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112] <- '3'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
@@ -78,6 +84,11 @@ hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 96 & hurMaxSpeed2$max_speed <= 1
 hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 113 & hurMaxSpeed2$max_speed <= 136] <- '4'
 hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 137] <- '5'
 
+
+
+barChartData <- hurMaxSpeed2
+col_name <- paste("column" , 1:5, sep = "")
+names(barChartData) <- col_name
 
 
 
@@ -313,36 +324,40 @@ server <- function(input, output, session) {
   #amber: this is the other part
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
+  # Number of Hurricanes per year since 2005
   output$bargraph1 <- renderPlot({
-    ggplot(data = hurMaxSpeed2, aes(x = date)) +
+    ggplot(data = barChartData, aes(x = column3)) +
              geom_bar(stat="bin", colour="black", fill="#DD8888",) +
             xlab("Year") + ylab("Number of Hurricanes") + 
             theme(text = element_text(size = 25)) }
   ) # End bargraph1
   
+  # Hurricanes with respect to their max speed 
   output$bargraph2 <- renderPlot({
-    ggplot(data = hurMaxSpeed2, aes(x = max_speed)) +
+    ggplot(data = barChartData, aes(x = column4)) +
       geom_bar(stat="bin", colour="black", fill="#DD8888",) +
       xlab("Max Speed") + ylab("Number of Hurricanes") + 
       theme(text = element_text(size = 25)) }
   ) # End bargraph2
   
+  # Hurricanes with respect to their max category 
   output$bargraph3 <- renderPlot({
-    ggplot(data = hurMaxSpeed2, aes(x = category)) +
+    ggplot(data = barChartData, aes(x = column5)) +
       geom_bar(stat="count", colour="black", fill="#DD8888",) +
       xlab("Max Category") + ylab("Number of Hurricanes") + 
+      
       theme(text = element_text(size = 24)) 
     }
   ) # End bargraph3
   
+  # Stacked Bar Graph Displaying Num of Hurricane Including Categories since 2005
   output$bargraph4 <- renderPlot({
-
-    # need to add year for y
-(ggplot(data = hurMaxSpeed2, aes(x = max_speed, fill = category)) +
-      geom_bar(position ="stack", stat = "count") +
-      xlab("Max_Speed") + ylab("Number of Hurricanes") + 
-      scale_fill_brewer(palette = 11) +
-      theme(text = element_text(size = 25)))
+(ggplot(data = barChartData, aes(x = column3, fill = column5)) +
+     geom_bar(position ="stack", stat = "count")
+     + xlab("Year") + ylab("Number of Hurricanes") + 
+      scale_fill_brewer(palette = 10) +
+      theme(text = element_text(size = 25))
+ ) # end ggplot
     
     }
   ) # End bargraph4
