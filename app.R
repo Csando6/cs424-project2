@@ -15,12 +15,17 @@ library(leaflet)
 library(scales)
 library(hashmap)
 library(plyr)
-library(dplyr)
+#library(dplyr)
 library(devtools)        #for theme
 library(dashboardthemes) #for theme
+library(hflights)
+library(repurrrsive)
+library(tidyverse)
+library(RColorBrewer)
 
 #IMPORTANT: app.R needs "dark_theme_mod.R" in the same directory to run well with the dark theme:
 source("dark_theme_mod.R") #connect
+
 
 
 #note: the data file to be read here is first processed by our Python script.
@@ -43,6 +48,9 @@ data <- rbind(data,data2)
 #getting data from 2005 and onwards
 data2005 <- data #[year(data$date) >= 2005,]
 
+#Data for graphs that begins at the year 2005
+Ambersdata2005 <- (data[year(data$date) >= 2005,])
+
 #select only some columns
 dataCol2005 = data2005[c(0:2, 4:11)] 
 
@@ -51,14 +59,38 @@ dataT <- data2005[,c(1,2,10)]
 hurMaxSpeed <- aggregate(. ~hur_code+hur_name, dataT, max)
 hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
 
+#barChartDataing Max Speed - Amber  
+dataQ <- Ambersdata2005[,c(1,2,10,4)] 
+hurMaxSpeed2 <- aggregate(. ~hur_code+hur_name+year(date), dataQ, max)[0:4]
+hurMaxSpeed2 <- hurMaxSpeed2[order(hurMaxSpeed2$hur_name, decreasing = FALSE),]
+
+
+
 #add a category column to hurMaxSpeed:
 hurMaxSpeed$category[hurMaxSpeed$max_speed <= 33] <- 'TD'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 34 & hurMaxSpeed$max_speed <= 63] <- 'TS'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 64 & hurMaxSpeed$max_speed <= 82] <- '1'
-hurMaxSpeed$category[hurMaxSpeed$max_speed >= 83 & hurMaxSpeed$max_speed <= 95] <- '2'
+hurMaxSpeed$category[hurMaxSpeed$max_speed >= 83  & hurMaxSpeed$max_speed <= 95] <- '2'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112] <- '3'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
+
+#add a category column to AmbersData2005 (For Ambers Graphs)
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed <= 33] <- 'TD'
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 34 & hurMaxSpeed2$max_speed <= 63] <- 'TS'
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 64 & hurMaxSpeed2$max_speed <= 82] <- '1'
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 83 & hurMaxSpeed2$max_speed <= 95] <- '2'
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 96 & hurMaxSpeed2$max_speed <= 112] <- '3'
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 113 & hurMaxSpeed2$max_speed <= 136] <- '4'
+hurMaxSpeed2$category[hurMaxSpeed2$max_speed >= 137] <- '5'
+
+
+
+barChartData <- hurMaxSpeed2
+col_name <- paste("column" , 1:5, sep = "")
+names(barChartData) <- col_name
+
+
 
 #getting top 10 hurricanes by max speed
 hurTop10 <- hurMaxSpeed[order(hurMaxSpeed$max_speed, decreasing = TRUE),]
@@ -121,8 +153,29 @@ ui <- dashboardPage(
              # < MAX SPEED LINE GRAPH >:
              box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
                plotOutput("maxWindSpeed", height=600)
-             )
-      ),
+             ),
+             
+             # #HURRICANES PER YEAR
+             box(title = "Number of Hurricanes Per Year Since 2005", solidHeader = TRUE, status = "primary", width= 12,
+                plotOutput("bargraph1", height = 600)
+                ), 
+             
+             # # HURRICANES AND THEIR MAX STRENGTH
+             box(title = "Hurricane Max Speed", solidHeader = TRUE, status = "primary", width= 12,
+                 plotOutput("bargraph2", height = 600)
+             ),
+             
+             # # HURRICANES AND THEIR MAX STRENGTH
+             box(title = "Hurricane Max Category", solidHeader = TRUE, status = "primary", width= 12,
+                 plotOutput("bargraph3", height = 600)
+             ),
+      
+            # STACKED BAR CHART
+            box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
+                plotOutput("bargraph4", height = 800)
+            )
+  
+             ), #End column
       
       #middle coulumn
       column(1,
@@ -140,7 +193,9 @@ ui <- dashboardPage(
     ) #end major fluidRow
     
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  ))
+  ) # End dash board body
+  
+  ) # End dashboard page
 
 
 # SERVER SIDE:
@@ -268,6 +323,45 @@ server <- function(input, output, session) {
     
   #amber: this is the other part
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
+  
+  # Number of Hurricanes per year since 2005
+  output$bargraph1 <- renderPlot({
+    ggplot(data = barChartData, aes(x = column3)) +
+             geom_bar(stat="bin", colour="black", fill="#DD8888",) +
+            xlab("Year") + ylab("Number of Hurricanes") + 
+            theme(text = element_text(size = 25)) }
+  ) # End bargraph1
+  
+  # Hurricanes with respect to their max speed 
+  output$bargraph2 <- renderPlot({
+    ggplot(data = barChartData, aes(x = column4)) +
+      geom_bar(stat="bin", colour="black", fill="#DD8888",) +
+      xlab("Max Speed") + ylab("Number of Hurricanes") + 
+      theme(text = element_text(size = 25)) }
+  ) # End bargraph2
+  
+  # Hurricanes with respect to their max category 
+  output$bargraph3 <- renderPlot({
+    ggplot(data = barChartData, aes(x = column5)) +
+      geom_bar(stat="count", colour="black", fill="#DD8888",) +
+      xlab("Max Category") + ylab("Number of Hurricanes") + 
+      
+      theme(text = element_text(size = 24)) 
+    }
+  ) # End bargraph3
+  
+  # Stacked Bar Graph Displaying Num of Hurricane Including Categories since 2005
+  output$bargraph4 <- renderPlot({
+(ggplot(data = barChartData, aes(x = column3, fill = column5)) +
+     geom_bar(position ="stack", stat = "count")
+     + xlab("Year") + ylab("Number of Hurricanes") + 
+      scale_fill_brewer(palette = 10) +
+      theme(text = element_text(size = 25))
+ ) # end ggplot
+    
+    }
+  ) # End bargraph4
+
 
   square <- function(x) {  #square of a number
     return(x * x)
@@ -347,7 +441,8 @@ server <- function(input, output, session) {
         ggtitle(paste("Wind Speed for Year ",input$hurrYear))
       graph
     }
-  })
+  }) # End line graph for max wind speed
+  
   
   # output$value <- renderText({ input$somevalue })     #text output
   
@@ -355,3 +450,4 @@ server <- function(input, output, session) {
   
 }
 shinyApp(ui = ui, server = server)
+
