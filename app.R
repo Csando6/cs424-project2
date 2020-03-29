@@ -44,6 +44,7 @@ data2$type <- "N"
 
 #combines both data tables into one
 data <- rbind(data,data2)
+data$min_pressure[data$min_pressure == -999] <- NA
 #data[is.na(data$hur_name),]="UNNAMED"
 
 #add a column. 'L' in record_id will be 50 in landfall - Matt
@@ -166,7 +167,8 @@ ui <- dashboardPage(
     selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
     selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
     selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
-                 
+    #date input
+    dateInput("hurrDate", "Date:",value="", format="mm/dd/yyyy"),
     #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
     checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
     radioButtons("hurrSpan", "Filter Year Range", 
@@ -202,7 +204,10 @@ ui <- dashboardPage(
              box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
                plotOutput("maxWindSpeed", height=600)
              ),
-             
+             # < MAX SPEED LINE GRAPH >:
+             box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
+                 plotOutput("minPressure", height=600)
+             ),
              # #HURRICANES PER YEAR
              box(title = "Number of Hurricanes Per Year Since 2005", solidHeader = TRUE, status = "primary", width= 12,
                 plotOutput("bargraph1", height = 600)
@@ -404,6 +409,51 @@ server <- function(input, output, session) {
     }
   )
 
+  filterMinA <- reactive(
+    if(input$hurrYear != "All"){
+      minAtlantic <- data2005[data2005$type =="A" & year(data2005$date)==input$hurrYear,]
+      minAtlantic <- minAtlantic[,c("date","min_pressure")]
+      minAtlantic$day <- day(minAtlantic$date)
+      minAtlantic$month <- month(minAtlantic$date)
+      minAtlantic$year <- year(minAtlantic$date)
+      minASpeed <-aggregate(. ~year+month+day,minAtlantic, max)
+      minASpeed$date <- paste(minASpeed$year,minASpeed$month,minASpeed$day,sep="-") %>% ymd()
+      minASpeed
+    }
+    else{
+      minAtlantic <- data2005[data2005$type=="A",]
+      minAtlantic <- minAtlantic[,c("date","min_pressure")]
+      minAtlantic$date <- year(minAtlantic$date)
+      minASpeed <- aggregate(. ~date, minAtlantic, max)
+      minASpeed
+    }
+  )
+  
+  filterMinN <- reactive(
+    if(input$hurrYear != "All"){
+      minNorth <- data2005[data2005$type=="N" & year(data2005$date)==input$hurrYear, ]
+      minNorth <- minNorth[,c("date","min_pressure")]
+      minNorth$day <- day(minNorth$date)
+      minNorth$month <- month(minNorth$date)
+      minNorth$year <- year(minNorth$date)
+      if(nrow(minNorth)==0 ){
+        minNSpeed <- data.frame(date = as.Date(character()),
+                                min_pressure=integer())
+      }else{
+        minNSpeed <- aggregate(. ~year+month+day, minNorth, max)
+        minNSpeed$date <- paste(minNSpeed$year,minNSpeed$month,minNSpeed$day,sep="-") %>% ymd()
+      }
+      minNSpeed
+    }
+    else{
+      minNorth <- data2005[data2005$type=='N',]
+      minNorth <- minNorth[,c("date","min_pressure")]
+      minNorth$date <- year(minNorth$date)
+      minNSpeed <- aggregate(. ~date, minNorth, max)
+      minNSpeed
+    }
+  )
+  
   
   #top10 list
   hurrTopR <- reactive(
@@ -443,7 +493,7 @@ server <- function(input, output, session) {
   
   # Stacked Bar Graph Displaying Num of Hurricane Including Categories since 2005
   output$bargraph4 <- renderPlot({
-(ggplot(data = barChartData, aes(x = column3, fill = column5)) +
+    (ggplot(data = barChartData, aes(x = column3, fill = column5)) +
      geom_bar(position ="stack", stat = "count")
      + xlab("Year") + ylab("Number of Hurricanes") + 
       scale_fill_brewer(palette = 10) +
@@ -455,7 +505,8 @@ server <- function(input, output, session) {
 
 
   square <- function(x) {  #square of a number
-    return(x * x)
+    return(x * x) 
+    #Charly S: Do we need this function, wanting to remove it
   }
   
   
@@ -463,7 +514,7 @@ server <- function(input, output, session) {
   output$leaf <- renderLeaflet({
     
     #get reactive data:
-    reactData <- filter()   #filter data
+    reactData <- filter() #filter data
     
     # Create a continuous palette function (from leaflet documentation)
     pal <- colorNumeric(
@@ -534,6 +585,34 @@ server <- function(input, output, session) {
       graph
     }
   }) # End line graph for max wind speed
+  
+  output$minPressure <-renderPlot({
+    minASpeed <-filterMinA()
+    minNSpeed <- filterMinN()
+    if(nrow(minNSpeed) == 0 ){
+      graph = ggplot() +
+        geom_line(data=minASpeed, aes(x=date,y=min_pressure, colour="Atlantic")) +
+        scale_colour_manual("",
+                            breaks = c("Atlantic"),
+                            values = c("red"))+
+        xlab("Dates")+
+        ylab("Max Wind Speed")+
+        ggtitle(paste("Min Pressure for the year of ",input$hurrYear))
+      graph
+    }
+    else{
+      graph = ggplot() +
+        geom_line(data=minASpeed, aes(x=date,y=min_pressure, colour="Atlantic")) +
+        geom_line(data=minNSpeed, aes(x=date,y=min_pressure, colour="North")) +
+        scale_colour_manual("",
+                            breaks = c("Atlantic","North"),
+                            values = c("red","blue"))+
+        xlab("Dates")+
+        ylab("Max Wind Speed")+
+        ggtitle(paste("Min Pressure for the year of ",input$hurrYear))
+      graph
+    }
+  })
   
   
   # output$value <- renderText({ input$somevalue })     #text output
