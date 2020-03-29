@@ -176,7 +176,7 @@ ui <- dashboardPage(
     selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
     selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
     selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
-                 
+    dateInput("hurrDate", "Date:",value="", format="mm/dd/yyyy"),
     checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
     checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
     checkboxInput("checkbox2005", "Only Since 2005", value = TRUE, width = NULL),
@@ -277,14 +277,16 @@ server <- function(input, output, session) {
     else if(input$ourHurCheckbox == TRUE && input$landfallCheckbox == TRUE){
       ourHurricanes[ourHurricanes$landfall == 'yes',]
     }
-    
+    else if(!is_empty(input$hurrDate)){
+      #print(input$hurrDate)
+      dateVal <- ymd(input$hurrDate)
+      #print(dateVal)
+      dataCol2005[dataCol2005$date==input$hurrDate,]
+    }
     else if (input$pacificCheckbox == FALSE){
-
       if (input$atlanticCheckbox == FALSE){
         dataCol2005[dataCol2005$type=='N/A',] #if neither atlantic nor pacific true -> show none
       }
-      
-      
       #DUPLICATED FOR ATLANTIC OCEAN:
       
       else{ #atlantic == TRUE
