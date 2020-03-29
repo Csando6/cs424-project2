@@ -171,9 +171,9 @@ ui <- dashboardPage(
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
     #INPUT FROM USER:
-    selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
-    selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
+    selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+    selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+    selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
                  
     checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
     checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
@@ -183,7 +183,7 @@ ui <- dashboardPage(
     selectInput(inputId="mapRender",  #choose map style
                label="Map Rendering",
                choices=mapRenderingsList),
-    checkboxInput("ourHurCheckbox", "5 Favorite Hurricanes", value = FALSE, width = NULL)
+    checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
     
   ),
   
