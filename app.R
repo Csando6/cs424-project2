@@ -122,10 +122,18 @@ classifiedHurricanes <- with(merg2,  merg2[order(hur_name),])
 
 
 #select only some columns
-dataCol2005 = data2005[c(0:2, 4:11)]
+dataCol2005 = data2005[c(0:2, 4:11, 24)]
 
 #make a join by hur_code -> adds landfall column to dataCol2005
 dataCol2005 = merge(hurLandfall[c(1,3)], dataCol2005, by="hur_code")
+
+
+#same for 2005+ only:
+#select only some columns
+ambersDataCol2005 = Ambersdata2005[c(0:2, 4:11, 24)]
+
+#make a join by hur_code -> adds landfall column to dataCol2005
+ambersDataCol2005 = merge(hurLandfall[c(1,3)], ambersDataCol2005, by="hur_code")
 
 
 #remove all hurricanes except the 5 favs:
@@ -164,22 +172,20 @@ ui <- dashboardPage(
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
     #INPUT FROM USER:
-    selectInput("hurrYear","Hurricane By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricane Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
-    selectInput("hurrTop","Hurricane Top 10",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
-    #date input
-    dateInput("hurrDate", "Date:",value="", format="mm/dd/yyyy"),
-    #checkboxInput("hurrTop10", "Hurricane Top 10", value = FALSE, width = NULL),
-    checkboxInput("landfallCheckbox", "Hurricanes Making Landfall", value = FALSE, width = NULL),
-    radioButtons("hurrSpan", "Filter Year Range", 
-                choices = c("Show Hurricanes Since 2005" = "span2005",
-                            "Show All Hurricanes" = "spanAll"),
-                selected = NULL, inline = FALSE, width = NULL),
+
+    selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+    selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+    selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
+                 
+    checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
+    checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
+    checkboxInput("checkbox2005", "Only Since 2005", value = TRUE, width = NULL),
+    checkboxInput("landfallCheckbox", "Only Making Landfall", value = FALSE, width = NULL),
+    
     selectInput(inputId="mapRender",  #choose map style
                label="Map Rendering",
                choices=mapRenderingsList),
-    checkboxInput("ourHurCheckbox", "5 interesting hurricanes", value = FALSE, width = NULL)
-    
+    checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
   ),
   
   #Body
@@ -271,87 +277,527 @@ server <- function(input, output, session) {
     else if(input$ourHurCheckbox == TRUE && input$landfallCheckbox == TRUE){
       ourHurricanes[ourHurricanes$landfall == 'yes',]
     }
+    
+    else if (input$pacificCheckbox == FALSE){
 
-    
-    #THIS PART IS ORIGINAL:
-    else if(input$landfallCheckbox == FALSE){
-            #user selected hurricane, show hurricane on map
-            if(input$hurrTop != "All" & input$hurrTop != ""){
-              updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-              updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-              dataCol2005[dataCol2005$hur_code==input$hurrTop,]
-            }
-            #user selected All, show all hurricane    
-            else if(input$hurrTop == "All" & input$hurrTop!=""){
-              updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-              updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-              dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code,]
-            }
-            #user selected hurrYear = All and hurrName = "All"
-            else if(input$hurrYear == "All" & input$hurrName == "All"){
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              dataCol2005
-            }
-            #user selected hurrName = All, hurrYear to a year
-            else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear,]
-              #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-              dataYear
-            }
-            #user selected hurrName to a name, hurrYear = All
-            else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
-              dataCol2005[dataCol2005$hur_name==input$hurrName,]
-            }
-            #user selected hurrName to a name, hurrYear to a year
-            else{
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName,]
-            }
+      if (input$atlanticCheckbox == FALSE){
+        dataCol2005[dataCol2005$type=='N/A',] #if neither atlantic nor pacific true -> show none
+      }
       
-    } #end checkbox FALSE
-    
-    
-    #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
-    else{ #TRUE
-            #user selected hurricane, show hurricane on map
-            if(input$hurrTop != "All" & input$hurrTop != ""){
-              updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-              updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-              dataCol2005[dataCol2005$hur_code==input$hurrTop & dataCol2005$landfall == 'yes',]
-            }
-            #user selected All, show all hurricane
-            else if(input$hurrTop == "All" & input$hurrTop!=""){
-              updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-              updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-              dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & dataCol2005$landfall == 'yes',]
-            }
-            #user selected hurrYear = All and hurrName = "All"
-            else if(input$hurrYear == "All" & input$hurrName == "All"){
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              dataCol2005[dataCol2005$landfall == 'yes',]
-            }
-            #user selected hurrName = All, hurrYear to a year
-            else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$landfall == 'yes',]
-              #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-              dataYear
-            }
-            #user selected hurrName to a name, hurrYear = All
-            else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
-              dataCol2005[dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes',]
-            }
-            #user selected hurrName to a name, hurrYear to a year
-            else{
-              updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes',]
-            }
+      
+      #DUPLICATED FOR ATLANTIC OCEAN:
+      
+      else{ #atlantic == TRUE
+        
+        #THIS PART IS ORIGINAL:
+        if(input$landfallCheckbox == FALSE & input$checkbox2005 == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & dataCol2005$type=='A',]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & dataCol2005$type=='A',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[dataCol2005$type=='A',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$type=='A',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
+            dataCol2005[dataCol2005$hur_name==input$hurrName & dataCol2005$type=='A',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$type=='A',]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
+        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
+            dataCol2005[dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
+          }
+        }
+        
+        
+        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
+        
+        #THIS PART IS ORIGINAL:
+        else if(input$landfallCheckbox == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$type=='A',]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$type=='A',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[ambersDataCol2005$type=='A',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$type=='A',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
+            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='A',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='A',]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        else if (input$landfallCheckbox == TRUE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
+            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
+          }
+        }
+      }
     }
+    
+    #-----
+    #---
+    #-
+    #DUPLICATED FOR PACIFIC HURRICANES:
+    else{ #pacific = true
+      
+      
+      if (input$atlanticCheckbox == FALSE){
+        
+        #THIS PART IS ORIGINAL:
+        if(input$landfallCheckbox == FALSE & input$checkbox2005 == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & dataCol2005$type=='N',]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & dataCol2005$type=='N',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[dataCol2005$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$type=='N',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
+            dataCol2005[dataCol2005$hur_name==input$hurrName & dataCol2005$type=='N',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$type=='N',]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
+        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
+            dataCol2005[dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+          }
+        }
+        
+        
+        
+        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
+        
+        #THIS PART IS ORIGINAL:
+        else if(input$landfallCheckbox == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$type=='N',]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$type=='N',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
+            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='N',]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        else if (input$landfallCheckbox == TRUE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
+            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+          }
+        }
+        
+      }
+      
+      
+      
+      #DUPLICATED FOR ATLANTIC OCEAN:
+      
+      else{ #atlantic == TRUE
+        
+        #THIS PART IS ORIGINAL:
+        if(input$landfallCheckbox == FALSE & input$checkbox2005 == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & (dataCol2005$type=='A' | dataCol2005$type=='N'),]   #realized
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[dataCol2005$type=='A' | dataCol2005$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
+            dataCol2005[dataCol2005$hur_name==input$hurrName & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
+        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code %in% hurTop10$hur_code & dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol2005$hur_name)), selected="All")
+            dataCol2005[dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
+          }
+        }
+        
+        
+        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
+        
+        #THIS PART IS ORIGINAL:
+        else if(input$landfallCheckbox == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
+            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        else if (input$landfallCheckbox == TRUE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
+            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
+          }
+        }
+      }
+      
+    }
+    
     
   )
 
