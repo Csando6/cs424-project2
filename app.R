@@ -173,7 +173,7 @@ ui <- dashboardPage(
   
   #Sidebar
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
-                   
+
                    #INPUT FROM USER:
                    
                    selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
@@ -189,11 +189,12 @@ ui <- dashboardPage(
                                label="Map Rendering",
                                choices=mapRenderingsList),
                    checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
+
   ),
   
   #Body
   dashboardBody(
-    
+
     # -------------------------------------------------------------------------------------------------------------------------------------------- #
     # Look HERE
     
@@ -210,6 +211,7 @@ ui <- dashboardPage(
       # -------------------------------------------------------------------------------------------------------------------------------------------- #
       #left column
       column(12,
+
              
              tabsetPanel(
                
@@ -265,15 +267,28 @@ ui <- dashboardPage(
       ) #end major fluidRow
       
     ) # End tabsetPanel
+
     
+  ) # End tabsetPanel
+  
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ) # End dash board body
   
+
   
   # -------------------------------------------------------------------------------------------------------------------------------------------- #
   
   
 ) # End dashboard page
+
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+
+
 
 
 
@@ -650,7 +665,7 @@ server <- function(input, output, session) {
           #user selected hurrName to a name, hurrYear to a year
           else{
             updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+              ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
           }
         }
         
@@ -938,7 +953,7 @@ server <- function(input, output, session) {
   
   #amber: this is the other part
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-  
+
   data2005$year <-year(data2005$date)
   data2005$year <- as.character(data2005$year)
   
