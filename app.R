@@ -214,62 +214,135 @@ ui <- dashboardPage(
 
              
              tabsetPanel(
-               
-               tabPanel ( "Tab1" ,
-                          # < LEAFLET >:
-                          box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
-                              leafletOutput("leaf", height = 600)
-                          ),
-                          # < TABLE OF HURRICANES SINCE 2005 >:
-                          box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
-                              dataTableOutput("hurrTable", height=400)
-                          ),
-               ), # End tabPanel
-               # -------------------------------------------------------------------------------------------------------------------------------------------- #
-               # -------------------------------------------------------------------------------------------------------------------------------------------- #
-               
-               tabPanel("Tab 2", 
-                        # < MAX SPEED LINE GRAPH >:
-                        box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
-                            plotOutput("maxWindSpeed", height=600)
-                        ),
-                        # < MAX SPEED LINE GRAPH >:
-                        box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
-                            plotOutput("minPressure", height=600)
-                        ),
+
+             
+             tabPanel ("Map / List" ,
+             # < LEAFLET >:
+             box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
+                 leafletOutput("leaf", height = 600)
+             ),
+             # < TABLE OF HURRICANES SINCE 2005 >:
+             box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
+                 dataTableOutput("hurrTable", height=400)
+             ),
+             ), # End tabPanel
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             
+             tabPanel("Line Graphs", 
+             # < MAX SPEED LINE GRAPH >:
+             box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
+               plotOutput("maxWindSpeed", height=600)
+             ),
+             # < MAX SPEED LINE GRAPH >:
+             box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
+                 plotOutput("minPressure", height=600)
+             ),
+             
+             ), # End tab Panel
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             
+             tabPanel("Bar Charts",
+             # #HURRICANES PER YEAR
+             box(title = "Number of Hurricanes / Year", solidHeader = TRUE, status = "primary", width= 12,
+                plotOutput("bargraph1", height = 600)
+                ), 
+             
+             # # HURRICANES AND THEIR MAX STRENGTH
+             box(title = "Hurricane Max Speed", solidHeader = TRUE, status = "primary", width= 12,
+                 plotOutput("bargraph2", height = 600)
+             ),
+             
+             # # HURRICANES AND THEIR MAX STRENGTH
+             box(title = "Hurricane Max Category", solidHeader = TRUE, status = "primary", width= 12,
+                 plotOutput("bargraph3", height = 600)
+             ),
+      
+            # STACKED BAR CHART
+            box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
+                plotOutput("bargraph4", height = 800)
+            )
+          ),   # End BarChart
+          
+                 tabPanel ( "About", 
+              
+                            h2("'Against The Wind'"),
+                            
+                            h3("Developed By: Amber Little, Charly Sandoval, and Matt Jankowski"),
+                            
+                            h4("Project 2 in CS 424 (Data Analytics / Visualization) at the University of Illinois at Chicago Spring 2020"),
+
+                            h5("________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________"),
+
+                            h3("5 Favorite Hurricanes"),
+                            h5("AL092017	HARVEY		2017"),
+                            h5("AL112017	IRMA	    2017"),
+                            h5("AL152017	MARIA		  2017"),
+                            h5("AL062018	FLORENCE	2018"),
+                            h5("AL142018	MICHAEL		2018"),
+                      
+                            h5("________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________"),
+                            h3("How Hurricanes are Categorized: Saffir-Simpson Hurricane Wind Scale"),
+                            
+                            
+                            h4("Tropical Depression (TD); Non-Hurricane"),
+                            h5("A tropical cyclone with maximum sustained winds of 38 mph (33 knots) or less."),
+                            
+                            h4("Tropical Storm (TS); Non-Hurricane"),
+                            h5("A tropical cyclone with maximum sustained winds of 39 to 73 mph (34 to 63 knots)."),
+                            
+                            h4("Category 1: 74-95 mph Sustained Winds; Very dangerous winds will produce some damage"),
+                            h5("Well-constructed frame homes could have damage to roof, shingles, vinyl siding and gutters. Extensive damage to power lines and poles likely will result in power outages that could last a few to several days. "),
+                            
+                            h4("Category 2: 96-110 mph Sustained Winds; Extremely dangerous winds will cause extensive damage"),
+                            h5(" Well-constructed frame homes could sustain major roof and siding damage. Near-total power loss is expected with outages that could last from several days to weeks."),
+                            
+                            h4("Category 3: 111-129 mph Sustained Winds - MAJOR; Devastating damage will occur"),
+                            h5(" Well-built framed homes may incur major damage or removal of roof decking and gable ends. Electricity and water will be unavailable for several days to weeks after the storm passes."),
+                            
+                            h4("Category 4: 130-156 mph  Sustained Winds - MAJOR; Catastrophic damage will occur"),
+                            h5("Well-built framed homes can sustain severe damage with loss of most of the roof structure and/or some exterior walls. Power outages will last weeks to possibly months. Most of the area will be uninhabitable for weeks or months."),
+                            
+                            h4("Category 5: 157 mph or higher Sustained Winds - MAJOR; Catastrophic damage will occur"),
+                            h5("A high percentage of framed homes will be destroyed, with total roof failure and wall collapse. Power outages will last for weeks to possibly months. Most of the area will be uninhabitable for weeks or months."),
+                            
+                            h4("Source: National Hurricane Center and Central Pacific Hurricane Center, https://www.nhc.noaa.gov/aboutsshws.php"),
+                            h5("________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________"),
                         
+                            h5("Note: This project implements an interactive display/analysis of a dataset of hurricane data dating back to 1851 in the Atlantic
+                            and Pacific regions. Modern technology has allowed us to gather data about a hurricane's path, collect its increase/decrease in speeds as it moves, 
+                            and can even predict its behavior! With this being said, there is limited information for hurricanes dating a few decades back. You will find that some of these hurricanes are listed as
+                            'UNNAMED' in addition to displaying minimal information about its path, max-speed, etc. Keep this in mind while analyzing hurricane records over the years"),
+   
+                            h5("* Hurricanes are measured in knots/hour. Knot is a unit of speed equal to one nautical mile per hour, exactly 1.852 km/h (1.151 mph)."),
+                        
+                            h5("* Libraries Used: shiny, shinydashboard, ggplot2, lubridate, DT, leaflet, plyr, devtools,
+                               dashboardthemes, hflights, repurrrsive, tidyverse, RColorBrewer"),
+                          
+                            h5("* Data Source: NHC Data Archive -> http://www.nhc.noaa.gov/data/#hurdat"),
+                          
+                            h5("* Created using R, RStudio, Shiny, Python, [insert theme credit here]")
+                            
+                            
+                            
+                            
+                            
+                            
+                
+                            
+                     
+          )
+        )  #, #End column
                ), # End tab Panel
                # -------------------------------------------------------------------------------------------------------------------------------------------- #
                # -------------------------------------------------------------------------------------------------------------------------------------------- #
-               
-               tabPanel("Tab3",
-                        
-                        # # HURRICANES AND THEIR MAX STRENGTH
-                        box(title = "Number of Hurricanes Per Category", solidHeader = TRUE, status = "primary", width= 12,
-                            plotOutput("bargraph3", height = 600)
-                        ),
-                        
-                        # #HURRICANES PER YEAR
-                        box(title = "Number of Hurricanes Per Year", solidHeader = TRUE, status = "primary", width= 12,
-                            plotOutput("bargraph1", height = 600)
-                        ), 
-                        
-                        # STACKED BAR CHART
-                        box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
-                            plotOutput("bargraph4", height = 800)
-                        )
-               ),   # End Tab3
-               
-               tabPanel ( "About" , 
-                          
-               )
-             )  #, #End column
+
+
       ) #end major fluidRow
       
     ) # End tabsetPanel
 
-    
-  ) # End tabsetPanel
   
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ) # End dash board body
@@ -986,6 +1059,14 @@ server <- function(input, output, session) {
       theme(text = element_text(size = 18)) 
   }) # End bargraph3
   
+
+      userReactive <- reactive(
+        if(input$hurrYear != "All"){
+          subset(data2005, data2005$year == input$hurrYear )
+        }
+        else
+          data2005
+      )
   
   
   # Number of Hurricanes per year
@@ -1005,8 +1086,7 @@ server <- function(input, output, session) {
       
       theme(text = element_text(size = 18)) 
   }) # End bargraph1
-  
-  
+
   
   # Stacked Bar Graph Displaying Num of Hurricane Including Categories since 2005
   output$bargraph4 <- renderPlot({
