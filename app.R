@@ -1,3 +1,4 @@
+#+
 #--app.R file for Project 2 of CS 424 - Group 9-------
 #-----------------------------------------------------
 #--Amber Little------*********************************
@@ -16,7 +17,6 @@ library(leaflet)
 library(scales)
 library(hashmap)
 library(plyr)
-#library(dplyr)
 library(devtools)        #for theme
 library(dashboardthemes) #for theme
 library(hflights)
@@ -26,65 +26,67 @@ library(RColorBrewer)
 
 #IMPORTANT: app.R needs "dark_theme_mod.R" in the same directory to run well with the dark theme:
 source("dark_theme_mod.R") #connect
-#source("extension_for_table.R") 
-
 
 #NOTE: the data file to be read here is first processed by our Python script.
 #READ IN THE DATA FILES:
 
+
 #marks data with A to identify it with Atlantic
 data <- read.csv(file = 'AtlanticHurrica-cleaned.csv', sep = ",", header = TRUE)
 data$date <- ymd(data$date)
-data$type <- "A"
+data$type <- "A" #Atlantic
+
 
 #marks data2 with N to identify it with NorthEast
 data2 <- read.csv(file="NortheastAndNor-cleaned.csv", sep=",", header=TRUE)
 data2$date <- ymd(data2$date)
-data2$type <- "N"
+data2$type <- "N" #Pacific
+
 
 #combines both data tables into one
 data <- rbind(data,data2)
 data$min_pressure[data$min_pressure == -999] <- NA
 #data[is.na(data$hur_name),]="UNNAMED"
 
+
 #add a column. 'L' in record_id will be 50 in landfall - Matt
 data$landfall[data$record_id == 'L'] <- 50
 data$landfall[data$record_id != 'L'] <- 0
 
 
-#getting data from 2005 and onwards
-data2005 <- data #[year(data$date) >= 2005,]
-
 #Data for graphs that begins at the year 2005
-Ambersdata2005 <- (data[year(data$date) >= 2005,])
+data2005 <- (data[year(data$date) >= 2005,])
 
 
 #getting code and name of hurricanes, saving max windspeed of hurricane from 2005 and onwards
-dataT <- data2005[,c(1,2,10)]
+dataT <- data[,c(1,2,10)]
 hurMaxSpeed <- aggregate(. ~hur_code+hur_name, dataT, max)
 hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
 
+
 #by year:
-dataY <- data2005[c(1,2,4)]
+dataY <- data[c(1,2,4)]
 dataY$date <- year(dataY$date)
 hurYear <- aggregate(. ~hur_code+hur_name, dataY, max)
 
+
 #getting code and name of hurricanes, saving min pressure of hurricane from 2005 and onwards - Matt
-dataP <- data2005[,c(1,2,11)]
+dataP <- data[,c(1,2,11)]
 hurMinPressure <- aggregate(. ~hur_code+hur_name, dataP, min)
 #hurMaxSpeed <- hurMaxSpeed[order(hurMaxSpeed$hur_name, decreasing = FALSE),]
 
+
 #barChartDataing Max Speed - Amber  
-dataQ <- Ambersdata2005[,c(1,2,10,4)] 
+dataQ <- data2005[,c(1,2,10,4)] 
 hurMaxSpeed2 <- aggregate(. ~hur_code+hur_name+year(date), dataQ, max)[0:4]
 hurMaxSpeed2 <- hurMaxSpeed2[order(hurMaxSpeed2$hur_name, decreasing = FALSE),]
 
+
 #filters by whether the hurricane made landfall or not - Matt
 #add the type in there as well - it will be useful later on
-dataL <- data2005[,c(1,2,25,24)]
+dataL <- data[,c(1,2,25,24)]
 hurLandfall <- aggregate(. ~hur_code+hur_name+type, dataL, max)
 hurLandfall <- hurLandfall[, c(1,2,4,3)] #reorder columns
-
 
 
 #add a category column to hurMaxSpeed:
@@ -95,6 +97,7 @@ hurMaxSpeed$category[hurMaxSpeed$max_speed >= 83  & hurMaxSpeed$max_speed <= 95]
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 96 & hurMaxSpeed$max_speed <= 112] <- '3'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 113 & hurMaxSpeed$max_speed <= 136] <- '4'
 hurMaxSpeed$category[hurMaxSpeed$max_speed >= 137] <- '5'
+
 
 #add a category column to hurMaxSpeed2 (For Ambers Graphs)
 hurMaxSpeed2$category[hurMaxSpeed2$max_speed <= 33] <- 'TD'
@@ -125,34 +128,35 @@ classifiedHurricanes <- with(merg2,  merg2[order(hur_name),])
 
 
 #select only some columns
-dataCol2005 = data2005[c(0:2, 4:11, 24)]
+dataCol = data[c(0:2, 4:11, 24)]
 
-#make a join by hur_code -> adds landfall column to dataCol2005
-dataCol2005 = merge(hurLandfall[c(1,3)], dataCol2005, by="hur_code")
+
+#make a join by hur_code -> adds landfall column to dataCol
+dataCol = merge(hurLandfall[c(1,3)], dataCol, by="hur_code")
 
 
 #same for 2005+ only:
 #select only some columns
-ambersDataCol2005 = Ambersdata2005[c(0:2, 4:11, 24)]
+dataCol2005 = data2005[c(0:2, 4:11, 24)]
 
-#make a join by hur_code -> adds landfall column to dataCol2005
-ambersDataCol2005 = merge(hurLandfall[c(1,3)], ambersDataCol2005, by="hur_code")
+
+#make a join by hur_code -> adds landfall column to dataCol
+dataCol2005 = merge(hurLandfall[c(1,3)], dataCol2005, by="hur_code")
 
 
 #remove all hurricanes except the 5 favs:
-ourHurricanes = dataCol2005[dataCol2005$hur_code == 'AL092017' |
-                              dataCol2005$hur_code == 'AL112017' |
-                              dataCol2005$hur_code == 'AL152017' |
-                              dataCol2005$hur_code == 'AL062018' |
-                              dataCol2005$hur_code == 'AL142018',]
-
+ourHurricanes = dataCol[dataCol$hur_code == 'AL092017' |
+                        dataCol$hur_code == 'AL112017' |
+                        dataCol$hur_code == 'AL152017' |
+                        dataCol$hur_code == 'AL062018' |
+                        dataCol$hur_code == 'AL142018',]
 
 #getting top 10 hurricanes by max speed
 hurTop10 <- hurMaxSpeed[order(hurMaxSpeed$max_speed, decreasing = TRUE),]
 hurTop10 <- hurTop10[1:10,]
 
 #range of hurricane data
-dataRange2005 <- range(year(data2005$date))
+dataRange2005 <- range(year(data$date))
 
 #Create a mapping between names and renderings
 #use this website to find more renderings: http://leaflet-extras.github.io/leaflet-providers/preview/index.html
@@ -161,12 +165,9 @@ mapSourcesList <- c(providers$OpenTopoMap, providers$Stamen.TonerBackground, pro
 mapRenderings <- hashmap(mapRenderingsList, mapSourcesList)
 
 
-
 #SHINY DASHBOARD:
-# Create the shiny dashboard
+
 ui <- dashboardPage(
-  
-  # skin = "red", #use the custom skin theme
   
   #Header
   dashboardHeader(title = "Hurricane Data Analysis"),
@@ -174,129 +175,162 @@ ui <- dashboardPage(
   #Sidebar
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
-                   #INPUT FROM USER:
-                   
-                   selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-                   selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
-                   selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
-                   dateInput("hurrDate", "Date:",value="", format="mm/dd/yyyy"),
-                   checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
-                   checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
-                   checkboxInput("checkbox2005", "Only Since 2005", value = TRUE, width = NULL),
-                   checkboxInput("landfallCheckbox", "Only Making Landfall", value = FALSE, width = NULL),
-                   
-                   selectInput(inputId="mapRender",  #choose map style
-                               label="Map Rendering",
-                               choices=mapRenderingsList),
-                   checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
-                   
+     #INPUT COMPONENTS FROM USER:
+     selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+     selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+     selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
+     dateInput("hurrDate", "Hurricanes By Date",value="", format="mm/dd/yyyy"),
+     
+     checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
+     checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
+     checkboxInput("checkbox2005", "Only Since 2005", value = FALSE, width = NULL),
+     checkboxInput("landfallCheckbox", "Only Making Landfall", value = FALSE, width = NULL),
+     
+     selectInput(inputId="mapRender",  #choose map style
+                 label="Map Rendering",
+                 choices=mapRenderingsList),
+     checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
   ),
   
-  #Body
+  
+  #Body - is made of tabs, which house individual components
   dashboardBody(
     
-    # -------------------------------------------------------------------------------------------------------------------------------------------- #
-    # Look HERE
+    dark_theme_mod,  ### changing theme to dark
     
-    
-    # -------------------------------------------------------------------------------------------------------------------------------------------- #
-    
-    dark_theme_mod,  ### changing theme
-    
-    # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
+    # APPLICATION LAYOUT: ----layout components here: ------------------------------------------------------
     fluidRow(
-      
-      
-      
-      # -------------------------------------------------------------------------------------------------------------------------------------------- #
-      #left column
+     
+      #central column:
       column(12,
-             
              
              tabsetPanel(
                
-               tabPanel ( "Tab1" ,
+               tabPanel ( "Map & List" ,
+                          #project summary
+                          box(headerPanel(title="Hurricane Analysis"), width = 9, height = 125, textOutput("explanation")),
+                          
+                          infoBoxOutput("progressBox", width = 3), #will show hur count
+                          
                           # < LEAFLET >:
-                          box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
+                          box(title = "Hurricane Map", background = "black", solidHeader = TRUE, status = "primary", width = 7,
                               leafletOutput("leaf", height = 600)
                           ),
                           # < TABLE OF HURRICANES SINCE 2005 >:
-                          box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
-                              dataTableOutput("hurrTable", height=400)
+                          box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=5,
+                              dataTableOutput("hurrTable", height=600)
                           ),
-               ), # End tabPanel
-               # -------------------------------------------------------------------------------------------------------------------------------------------- #
+               ), # End tab1
                # -------------------------------------------------------------------------------------------------------------------------------------------- #
                
-               tabPanel("Tab 2", 
+               tabPanel("Intensity Plots", 
                         # < MAX SPEED LINE GRAPH >:
-                        box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
+                        box(title="Hurricane Max Wind Speed", background = "black", solidHeader = TRUE, status="primary",width=12,
                             plotOutput("maxWindSpeed", height=600)
                         ),
                         # < MAX SPEED LINE GRAPH >:
-                        box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
+                        box(title="Hurricane Min Pressure", background = "black", solidHeader = TRUE, status="primary",width=12,
                             plotOutput("minPressure", height=600)
                         ),
                         
-               ), # End tab Panel
+               ), # End tab2
                # -------------------------------------------------------------------------------------------------------------------------------------------- #
-               # -------------------------------------------------------------------------------------------------------------------------------------------- #
-               
-               tabPanel("Tab3",
+              
+               tabPanel("Numerical Graphs",
                         
                         # # HURRICANES AND THEIR MAX STRENGTH
-                        box(title = "Number of Hurricanes Per Category", solidHeader = TRUE, status = "primary", width= 12,
+                        box(title = "Number of Hurricanes Per Category", background = "black", solidHeader = TRUE, status = "primary", width= 12,
                             plotOutput("bargraph3", height = 600)
                         ),
                         
                         # #HURRICANES PER YEAR
-                        box(title = "Number of Hurricanes Per Year", solidHeader = TRUE, status = "primary", width= 12,
+                        box(title = "Number of Hurricanes Per Year", background = "black", solidHeader = TRUE, status = "primary", width= 12,
                             plotOutput("bargraph1", height = 600)
                         ), 
                         
                         # STACKED BAR CHART
-                        box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
+                        box(title = "Hurricanes & Their Strength", background = "black", solidHeader = TRUE, status = "primary", width= 12,
                             plotOutput("bargraph4", height = 800)
                         )
-               )#end tab 3
+               ),   # End Tab3
                
-             )#end tabset panel
-               
- 
-      )  #End column 
-      
-    ) #end major fluidRow
-       
-  
-  
-  # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               tabPanel ( "About" , 
+                          
+                          h2("Against The Wind"),
+                          
+                          h3("Developed By: Amber Little, Charly Sandoval, and Matt Jankowski"),
+                          
+                          h4("Project 2 in CS 424 (Data Analytics / Visualization) at the University of Illinois at Chicago Spring 2020"),
+                          
+                          h5("________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________"),
+                          
+                          h3("5 Favorite Hurricanes"),
+                          h3(""),
+                          h4("These 5 hurricanes are from 2017 and 2018. Most of us remember these hurricanes and the destruction they caused on the US and Carribean islands."),
+                          h4("In order to investigate them, toggle the -Our 5 Favorites- filter to explore the specs and stats of some of the most powerful hurricanes of modern times."),
+                          h3(""),
+                          h5("AL092017 -	HARVEY		- 2017"),
+                          h5("AL112017 -	IRMA	    - 2017"),
+                          h5("AL152017 -	MARIA		  - 2017"),
+                          h5("AL062018 -	FLORENCE	- 2018"),
+                          h5("AL142018 -	MICHAEL		- 2018"),
+                          
+                          h5("________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________"),
+                          h3("How Hurricanes are Categorized: Saffir-Simpson Hurricane Wind Scale"),
+                          
+                          
+                          h4("Tropical Depression (TD); Non-Hurricane"),
+                          h5("A tropical cyclone with maximum sustained winds of 38 mph (33 knots) or less."),
+                          
+                          h4("Tropical Storm (TS); Non-Hurricane"),
+                          h5("A tropical cyclone with maximum sustained winds of 39 to 73 mph (34 to 63 knots)."),
+                          
+                          h4("Category 1: 74-95 mph Sustained Winds; Very dangerous winds will produce some damage"),
+                          h5("Well-constructed frame homes could have damage to roof, shingles, vinyl siding and gutters. Extensive damage to power lines and poles likely will result in power outages that could last a few to several days. "),
+                          
+                          h4("Category 2: 96-110 mph Sustained Winds; Extremely dangerous winds will cause extensive damage"),
+                          h5(" Well-constructed frame homes could sustain major roof and siding damage. Near-total power loss is expected with outages that could last from several days to weeks."),
+                          
+                          h4("Category 3: 111-129 mph Sustained Winds - MAJOR; Devastating damage will occur"),
+                          h5(" Well-built framed homes may incur major damage or removal of roof decking and gable ends. Electricity and water will be unavailable for several days to weeks after the storm passes."),
+                          
+                          h4("Category 4: 130-156 mph  Sustained Winds - MAJOR; Catastrophic damage will occur"),
+                          h5("Well-built framed homes can sustain severe damage with loss of most of the roof structure and/or some exterior walls. Power outages will last weeks to possibly months. Most of the area will be uninhabitable for weeks or months."),
+                          
+                          h4("Category 5: 157 mph or higher Sustained Winds - MAJOR; Catastrophic damage will occur"),
+                          h5("A high percentage of framed homes will be destroyed, with total roof failure and wall collapse. Power outages will last for weeks to possibly months. Most of the area will be uninhabitable for weeks or months."),
+                          
+                          h4("Source: National Hurricane Center and Central Pacific Hurricane Center, https://www.nhc.noaa.gov/aboutsshws.php"),
+                          h5("________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________"),
+                          
+                          h5("Note: This project implements an interactive display/analysis of a dataset of hurricane data dating back to 1851 in the Atlantic
+                            and Pacific regions. Modern technology has allowed us to gather data about a hurricane's path, collect its increase/decrease in speeds as it moves, 
+                            and can even predict its behavior! With this being said, there is limited information for hurricanes dating a few decades back. You will find that some of these hurricanes are listed as
+                            'UNNAMED' in addition to displaying minimal information about its path, max-speed, etc. Keep this in mind while analyzing hurricane records over the years"),
+                          
+                          h5("* Hurricanes are measured in knots/hour. Knot is a unit of speed equal to one nautical mile per hour, exactly 1.852 km/h (1.151 mph)."),
+                          
+                          h5("* Libraries Used: shiny, shinydashboard, ggplot2, lubridate, DT, leaflet, plyr, devtools,
+                               dashboardthemes, hflights, repurrrsive, tidyverse, RColorBrewer"),
+                          
+                          h5("* Data Source: NHC Data Archive -> http://www.nhc.noaa.gov/data/#hurdat"),
+                          
+                          h5("* Created using R, RStudio, Shiny, Python, [insert theme credit here]")
+               ) # End tabsetPanel
+             ) 
+      ) # End tabsetPanel
+    ) # End tabsetPanel
   ) # End dash board body
-
-
-
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-
-
+  
+  
+  
+  # -------------------------------------------------------------------------------------------------------------------------------------------- #
+  
+  
 ) # End dashboard page
 
 
-
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-
-
-
-
-
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------------------------------------------------------------------------- #
-
-
-
+#................................................................................................................................................ #
 # SERVER SIDE:
 server <- function(input, output, session) {
   
@@ -314,6 +348,7 @@ server <- function(input, output, session) {
     }
     
     #IF 5-Hurricane option selected AND Landfall
+    #this is independent from the other filters
     else if(input$ourHurCheckbox == TRUE && input$landfallCheckbox == TRUE){
       ourHurricanes[ourHurricanes$landfall == 'yes',]
     }
@@ -321,11 +356,13 @@ server <- function(input, output, session) {
       #print(input$hurrDate)
       dateVal <- ymd(input$hurrDate)
       #print(dateVal)
-      dataCol2005[dataCol2005$date==input$hurrDate,]
+      dataCol[dataCol$date==input$hurrDate,]
     }
+    
+    #the rest is independent from the above
     else if (input$pacificCheckbox == FALSE){
       if (input$atlanticCheckbox == FALSE){
-        dataCol2005[dataCol2005$type=='N/A',] #if neither atlantic nor pacific true -> show none
+        dataCol[dataCol$type=='N/A',] #if neither atlantic nor pacific true -> show none
       }
       #DUPLICATED FOR ATLANTIC OCEAN:
       
@@ -333,6 +370,89 @@ server <- function(input, output, session) {
         
         #THIS PART IS ORIGINAL:
         if(input$landfallCheckbox == FALSE & input$checkbox2005 == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code==input$hurrTop & dataCol$type=='A',]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code %in% hurTop10$hur_code & dataCol$type=='A',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[dataCol$type=='A',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol[year(dataCol$date)==input$hurrYear & dataCol$type=='A',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol$hur_name)), selected="All")
+            dataCol[dataCol$hur_name==input$hurrName & dataCol$type=='A',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName & dataCol$type=='A',]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
+        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code==input$hurrTop & dataCol$landfall == 'yes' & dataCol$type=='A',]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code %in% hurTop10$hur_code & dataCol$landfall == 'yes' & dataCol$type=='A',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[dataCol$landfall == 'yes' & dataCol$type=='A',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol[year(dataCol$date)==input$hurrYear & dataCol$landfall == 'yes' & dataCol$type=='A',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol$hur_name)), selected="All")
+            dataCol[dataCol$hur_name==input$hurrName & dataCol$landfall == 'yes' & dataCol$type=='A',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName & dataCol$landfall == 'yes' & dataCol$type=='A',]
+          }
+        }
+        
+        
+        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
+        
+        #THIS PART IS ORIGINAL:
+        else if(input$landfallCheckbox == FALSE){
           #user selected hurricane, show hurricane on map
           if(input$hurrTop != "All" & input$hurrTop != ""){
             updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
@@ -372,8 +492,7 @@ server <- function(input, output, session) {
         } #end checkbox FALSE
         
         
-        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
-        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+        else if (input$landfallCheckbox == TRUE){ #TRUE
           #user selected hurricane, show hurricane on map
           if(input$hurrTop != "All" & input$hurrTop != ""){
             updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
@@ -410,92 +529,10 @@ server <- function(input, output, session) {
             dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='A',]
           }
         }
-        
-        
-        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
-        
-        #THIS PART IS ORIGINAL:
-        else if(input$landfallCheckbox == FALSE){
-          #user selected hurricane, show hurricane on map
-          if(input$hurrTop != "All" & input$hurrTop != ""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$type=='A',]
-          }
-          #user selected All, show all hurricane    
-          else if(input$hurrTop == "All" & input$hurrTop!=""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$type=='A',]
-          }
-          #user selected hurrYear = All and hurrName = "All"
-          else if(input$hurrYear == "All" & input$hurrName == "All"){
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[ambersDataCol2005$type=='A',]
-          }
-          #user selected hurrName = All, hurrYear to a year
-          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$type=='A',]
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-            dataYear
-          }
-          #user selected hurrName to a name, hurrYear = All
-          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
-            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='A',]
-          }
-          #user selected hurrName to a name, hurrYear to a year
-          else{
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='A',]
-          }
-          
-        } #end checkbox FALSE
-        
-        
-        else if (input$landfallCheckbox == TRUE){ #TRUE
-          #user selected hurricane, show hurricane on map
-          if(input$hurrTop != "All" & input$hurrTop != ""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
-          }
-          #user selected All, show all hurricane
-          else if(input$hurrTop == "All" & input$hurrTop!=""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
-          }
-          #user selected hurrYear = All and hurrName = "All"
-          else if(input$hurrYear == "All" & input$hurrName == "All"){
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
-          }
-          #user selected hurrName = All, hurrYear to a year
-          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-            dataYear
-          }
-          #user selected hurrName to a name, hurrYear = All
-          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
-            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
-          }
-          #user selected hurrName to a name, hurrYear to a year
-          else{
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='A',]
-          }
-        }
       }
     }
     
-    #-----
+    #----- half point of filter()
     #---
     #-
     #DUPLICATED FOR PACIFIC HURRICANES:
@@ -506,6 +543,89 @@ server <- function(input, output, session) {
         
         #THIS PART IS ORIGINAL:
         if(input$landfallCheckbox == FALSE & input$checkbox2005 == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code==input$hurrTop & dataCol$type=='N',]
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code %in% hurTop10$hur_code & dataCol$type=='N',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[dataCol$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol[year(dataCol$date)==input$hurrYear & dataCol$type=='N',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol$hur_name)), selected="All")
+            dataCol[dataCol$hur_name==input$hurrName & dataCol$type=='N',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName & dataCol$type=='N',]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
+        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code==input$hurrTop & dataCol$landfall == 'yes' & dataCol$type=='N',]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code %in% hurTop10$hur_code & dataCol$landfall == 'yes' & dataCol$type=='N',]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[dataCol$landfall == 'yes' & dataCol$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol[year(dataCol$date)==input$hurrYear & dataCol$landfall == 'yes' & dataCol$type=='N',]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol$hur_name)), selected="All")
+            dataCol[dataCol$hur_name==input$hurrName & dataCol$landfall == 'yes' & dataCol$type=='N',]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName & dataCol$landfall == 'yes' & dataCol$type=='N',]
+          }
+        }
+        
+        
+        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
+        
+        #THIS PART IS ORIGINAL:
+        else if(input$landfallCheckbox == FALSE){
           #user selected hurricane, show hurricane on map
           if(input$hurrTop != "All" & input$hurrTop != ""){
             updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
@@ -545,8 +665,7 @@ server <- function(input, output, session) {
         } #end checkbox FALSE
         
         
-        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
-        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+        else if (input$landfallCheckbox == TRUE){ #TRUE
           #user selected hurricane, show hurricane on map
           if(input$hurrTop != "All" & input$hurrTop != ""){
             updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
@@ -583,93 +702,8 @@ server <- function(input, output, session) {
             dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
           }
         }
-        
-        
-        
-        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
-        
-        #THIS PART IS ORIGINAL:
-        else if(input$landfallCheckbox == FALSE){
-          #user selected hurricane, show hurricane on map
-          if(input$hurrTop != "All" & input$hurrTop != ""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$type=='N',]
-          }
-          #user selected All, show all hurricane    
-          else if(input$hurrTop == "All" & input$hurrTop!=""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrYear = All and hurrName = "All"
-          else if(input$hurrYear == "All" & input$hurrName == "All"){
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrName = All, hurrYear to a year
-          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$type=='N',]
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-            dataYear
-          }
-          #user selected hurrName to a name, hurrYear = All
-          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
-            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrName to a name, hurrYear to a year
-          else{
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$type=='N',]
-          }
-          
-        } #end checkbox FALSE
-        
-        
-        else if (input$landfallCheckbox == TRUE){ #TRUE
-          #user selected hurricane, show hurricane on map
-          if(input$hurrTop != "All" & input$hurrTop != ""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
-          }
-          #user selected All, show all hurricane
-          else if(input$hurrTop == "All" & input$hurrTop!=""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrYear = All and hurrName = "All"
-          else if(input$hurrYear == "All" & input$hurrName == "All"){
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrName = All, hurrYear to a year
-          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-            dataYear
-          }
-          #user selected hurrName to a name, hurrYear = All
-          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
-            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrName to a name, hurrYear to a year
-          else{
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
-          }
-        }
-        
       }
-      
-      
+    
       
       #DUPLICATED FOR ATLANTIC OCEAN:
       
@@ -681,7 +715,90 @@ server <- function(input, output, session) {
           if(input$hurrTop != "All" & input$hurrTop != ""){
             updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
             updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            dataCol2005[dataCol2005$hur_code==input$hurrTop & (dataCol2005$type=='A' | dataCol2005$type=='N'),]   #realized
+            dataCol[dataCol$hur_code==input$hurrTop & (dataCol$type=='A' | dataCol$type=='N'),]   #realized
+          }
+          #user selected All, show all hurricane    
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code %in% hurTop10$hur_code & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[dataCol$type=='A' | dataCol$type=='N',]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol[year(dataCol$date)==input$hurrYear & (dataCol$type=='A' | dataCol$type=='N'),]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol$hur_name)), selected="All")
+            dataCol[dataCol$hur_name==input$hurrName & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          
+        } #end checkbox FALSE
+        
+        
+        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
+        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code==input$hurrTop & dataCol$landfall == 'yes' & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          #user selected All, show all hurricane
+          else if(input$hurrTop == "All" & input$hurrTop!=""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol[dataCol$hur_code %in% hurTop10$hur_code & dataCol$landfall == 'yes' & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          #user selected hurrYear = All and hurrName = "All"
+          else if(input$hurrYear == "All" & input$hurrName == "All"){
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[dataCol$landfall == 'yes' & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          #user selected hurrName = All, hurrYear to a year
+          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataYear <- dataCol[year(dataCol$date)==input$hurrYear & dataCol$landfall == 'yes' & (dataCol$type=='A' | dataCol$type=='N'),]
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
+            dataYear
+          }
+          #user selected hurrName to a name, hurrYear = All
+          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataCol$hur_name)), selected="All")
+            dataCol[dataCol$hur_name==input$hurrName & dataCol$landfall == 'yes' & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+          #user selected hurrName to a name, hurrYear to a year
+          else{
+            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
+            dataCol[year(dataCol$date)==input$hurrYear & dataCol$hur_name==input$hurrName & dataCol$landfall == 'yes' & (dataCol$type=='A' | dataCol$type=='N'),]
+          }
+        }
+        
+        
+        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
+        
+        #THIS PART IS ORIGINAL:
+        else if(input$landfallCheckbox == FALSE){
+          #user selected hurricane, show hurricane on map
+          if(input$hurrTop != "All" & input$hurrTop != ""){
+            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
+            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
+            dataCol2005[dataCol2005$hur_code==input$hurrTop & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
           }
           #user selected All, show all hurricane    
           else if(input$hurrTop == "All" & input$hurrTop!=""){
@@ -716,8 +833,7 @@ server <- function(input, output, session) {
         } #end checkbox FALSE
         
         
-        #THIS PART WAS REPLICATED & EXTENDED FROM THE ABOVE:
-        else if(input$landfallCheckbox == TRUE & input$checkbox2005 == FALSE){ #TRUE
+        else if (input$landfallCheckbox == TRUE){ #TRUE
           #user selected hurricane, show hurricane on map
           if(input$hurrTop != "All" & input$hurrTop != ""){
             updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
@@ -754,102 +870,19 @@ server <- function(input, output, session) {
             dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & (dataCol2005$type=='A' | dataCol2005$type=='N'),]
           }
         }
-        
-        
-        # DUPLICATED FOR 2005 / ALL FILTER: (The 2005 checkbox is true:)
-        
-        #THIS PART IS ORIGINAL:
-        else if(input$landfallCheckbox == FALSE){
-          #user selected hurricane, show hurricane on map
-          if(input$hurrTop != "All" & input$hurrTop != ""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected All, show all hurricane    
-          else if(input$hurrTop == "All" & input$hurrTop!=""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected hurrYear = All and hurrName = "All"
-          else if(input$hurrYear == "All" & input$hurrName == "All"){
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N',]
-          }
-          #user selected hurrName = All, hurrYear to a year
-          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-            dataYear
-          }
-          #user selected hurrName to a name, hurrYear = All
-          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
-            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected hurrName to a name, hurrYear to a year
-          else{
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          
-        } #end checkbox FALSE
-        
-        
-        else if (input$landfallCheckbox == TRUE){ #TRUE
-          #user selected hurricane, show hurricane on map
-          if(input$hurrTop != "All" & input$hurrTop != ""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code==input$hurrTop & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected All, show all hurricane
-          else if(input$hurrTop == "All" & input$hurrTop!=""){
-            updateSelectInput(session,"hurrYear",choices=append("All",seq(dataRange2005[1],dataRange2005[2],by=1)), selected="")
-            updateSelectInput(session,"hurrName",choices=append("All",as.character(hurMaxSpeed$hur_name)), selected="")
-            ambersDataCol2005[ambersDataCol2005$hur_code %in% hurTop10$hur_code & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected hurrYear = All and hurrName = "All"
-          else if(input$hurrYear == "All" & input$hurrName == "All"){
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected hurrName = All, hurrYear to a year
-          else if (input$hurrName == "All" & input$hurrYear != "All"){  #filter by year:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataYear <- ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(dataYear$hur_name)), selected="All")
-            dataYear
-          }
-          #user selected hurrName to a name, hurrYear = All
-          else if (input$hurrName != "All" & input$hurrYear == "All"){  #filter by name:
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            #updateSelectInput(session,"hurrName",choices=append("All",as.character(ambersDataCol2005$hur_name)), selected="All")
-            ambersDataCol2005[ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-          #user selected hurrName to a name, hurrYear to a year
-          else{
-            updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & (ambersDataCol2005$type=='A' | ambersDataCol2005$type=='N'),]
-          }
-        }
       }
-      
     }
     
-    
-  )
+  ) #end filter reactive function
   
   
+  #Reactive functions for line plots:
   
   #creates table for lineGraph of max wind speed
   filterWindA <- reactive(
     #get max windspeed per day for specified year
     if(input$hurrYear != "All" ){
-      maxAtlantic <- data2005[data2005$type=="A" & year(data2005$date)==input$hurrYear,]
+      maxAtlantic <- data[data$type=="A" & year(data$date)==input$hurrYear,]
       maxAtlantic <- maxAtlantic[,c("date","max_speed")]
       maxAtlantic$day <- day(maxAtlantic$date)
       maxAtlantic$month <- month(maxAtlantic$date)
@@ -861,7 +894,7 @@ server <- function(input, output, session) {
     }
     #get max windspeed for all years
     else{
-      maxAtlantic <- data2005[data2005$type=="A",]
+      maxAtlantic <- data[data$type=="A",]
       maxAtlantic <- maxAtlantic[,c("date","max_speed")]
       maxAtlantic$date <- year(maxAtlantic$date)
       maxASpeed <- aggregate(. ~date,maxAtlantic,max)
@@ -872,7 +905,7 @@ server <- function(input, output, session) {
   filterWindN <- reactive(
     #get max windspeed per day for specified year
     if(input$hurrYear != "All"){
-      maxNorth <- data2005[data2005$type=="N" & year(data2005$date)==input$hurrYear,]
+      maxNorth <- data[data$type=="N" & year(data$date)==input$hurrYear,]
       maxNorth <- maxNorth[,c("date","max_speed")]
       maxNorth$day <- day(maxNorth$date)
       maxNorth$month <- month(maxNorth$date)
@@ -889,7 +922,7 @@ server <- function(input, output, session) {
     }
     #get max windspeed for all years
     else{
-      maxNorth <- data2005[data2005$type=="N" ,]
+      maxNorth <- data[data$type=="N" ,]
       maxNorth <- maxNorth[,c("date","max_speed")]
       maxNorth$date <- year(maxNorth$date)
       maxNSpeed <- aggregate(. ~date,maxNorth, max)
@@ -899,7 +932,7 @@ server <- function(input, output, session) {
   
   filterMinA <- reactive(
     if(input$hurrYear != "All"){
-      minAtlantic <- data2005[data2005$type =="A" & year(data2005$date)==input$hurrYear,]
+      minAtlantic <- data[data$type =="A" & year(data$date)==input$hurrYear,]
       minAtlantic <- minAtlantic[,c("date","min_pressure")]
       minAtlantic$day <- day(minAtlantic$date)
       minAtlantic$month <- month(minAtlantic$date)
@@ -909,7 +942,7 @@ server <- function(input, output, session) {
       minASpeed
     }
     else{
-      minAtlantic <- data2005[data2005$type=="A",]
+      minAtlantic <- data[data$type=="A",]
       minAtlantic <- minAtlantic[,c("date","min_pressure")]
       minAtlantic$date <- year(minAtlantic$date)
       minASpeed <- aggregate(. ~date, minAtlantic, max)
@@ -919,7 +952,7 @@ server <- function(input, output, session) {
   
   filterMinN <- reactive(
     if(input$hurrYear != "All"){
-      minNorth <- data2005[data2005$type=="N" & year(data2005$date)==input$hurrYear, ]
+      minNorth <- data[data$type=="N" & year(data$date)==input$hurrYear, ]
       minNorth <- minNorth[,c("date","min_pressure")]
       minNorth$day <- day(minNorth$date)
       minNorth$month <- month(minNorth$date)
@@ -934,7 +967,7 @@ server <- function(input, output, session) {
       minNSpeed
     }
     else{
-      minNorth <- data2005[data2005$type=='N',]
+      minNorth <- data[data$type=='N',]
       minNorth <- minNorth[,c("date","min_pressure")]
       minNorth$date <- year(minNorth$date)
       minNSpeed <- aggregate(. ~date, minNorth, max)
@@ -942,19 +975,20 @@ server <- function(input, output, session) {
     }
   )
   
-  #top10 list
-  hurrTopR <- reactive(
-    if(input$hurrTop == "All"){
-      data2005 
-    }
-  )
+  # #top10 list
+  # hurrTopR <- reactive(
+  #   if(input$hurrTop == "All"){
+  #     data 
+  #   }
+  # )
   
-  #amber: this is the other part
-  #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
-  data2005$year <-year(data2005$date)
-  data2005$year <- as.character(data2005$year)
+  data$year <-year(data$date)
+  data$year <- as.character(data$year)
   
+  
+  #reactive function used in bar charts
+  #filters only by specific hurrYear and by 2005+
   userReactive <- reactive(
     if (input$checkbox2005 == TRUE){
       if(input$hurrYear != "All"){
@@ -972,16 +1006,26 @@ server <- function(input, output, session) {
     }
   )
   
+  
+  # BACKEND LAYER: ---- backend components here: ------------------------------------------------------
+  
+  #BAR CHARTS:
+  
   # Hurricanes with respect to their max category 
   output$bargraph3 <- renderPlot({
     
     hurPerYearReactive <- userReactive()
     
+    #reorder bar chart bars
+    positions <- c("TD", "TS", "1", "2", "3", "4", "5")
+    
     ggplot(data = hurPerYearReactive, aes(x = category, fill=type)) +
-      geom_bar(stat="count", position = "dodge") +
+      geom_bar(stat="count", position = position_dodge(preserve = 'single')) +
       xlab("Category") + ylab("Number of Hurricanes") + 
       scale_fill_manual(values=c('navy', '#e4283B'), name="Ocean", labels = c("Atlantic", "Pacific")) +
-      theme(text = element_text(size = 18)) 
+      scale_x_discrete(limits = positions) +
+      theme(text = element_text(size = 18)) +
+      scale_y_continuous(breaks= pretty_breaks())
   }) # End bargraph3
   
   
@@ -1000,8 +1044,8 @@ server <- function(input, output, session) {
       geom_bar(width=0.3) +
       scale_fill_manual(values=c('navy', '#e4283B'), name="Ocean", labels = c("Atlantic", "Pacific")) +
       scale_x_continuous(breaks = seq(min_year, max_year, by=10)) +
-      
-      theme(text = element_text(size = 18)) 
+      theme(text = element_text(size = 18))  +
+      scale_y_continuous(breaks= pretty_breaks())
   }) # End bargraph1
   
   
@@ -1024,17 +1068,12 @@ server <- function(input, output, session) {
         xlab("Year") + ylab("Number of Hurricanes") + 
         scale_fill_manual(values=rev(c('#488f31', '#6dac78', '#b7cf8d', '#fff1af', '#f5bb78', '#e98058', '#de425b')), name="Category") + #color theme
         scale_x_continuous(breaks = seq(min_year, max_year, by=10)) + #labels on x axis
-        theme(text = element_text(size = 18))                         #size of text
+        theme(text = element_text(size = 18)) +
+        scale_y_continuous(breaks= pretty_breaks())                      #size of text
     ) # end ggplot
     
-  }
-  ) # End bargraph4
+  }) # End bargraph4
   
-  
-  square <- function(x) {  #square of a number
-    return(x * x) 
-    #Charly S: Do we need this function, wanting to remove it
-  }
   
   
   # add a leaflet map
@@ -1052,7 +1091,7 @@ server <- function(input, output, session) {
     map <- leaflet(data = reactData) %>%
       addTiles() %>%
       addProviderTiles(mapRenderings[[input$mapRender]]) %>%
-      setView(lng = -75.9, lat = 39.1, zoom = 3) %>%
+      setView(lng = -90, lat = 39.1, zoom = 3) %>%
       addCircles(  
         lng = reactData$lon, lat = reactData$lat, 
         color = pal(reactData$max_speed), 
@@ -1062,27 +1101,56 @@ server <- function(input, output, session) {
                       month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time      
         ),
         labelOptions = labelOptions(textOnly = TRUE, direction = "top",
-                                    style = list(
-                                      "color" = "black",
-                                      # "font-style" = "italic",
-                                      "box-shadow" = "3px 3px 3px rgba(0,0,0,1)",
-                                      "font-size" = "10px",
-                                      "background-color" =  "white"
-                                    )
+          style = list(
+            "color" = "black",
+            # "font-style" = "italic",
+            "box-shadow" = "3px 3px 3px rgba(0,0,0,1)",
+            "font-size" = "10px",
+            "background-color" =  "white"
+          )
         )
       ) 
     map   #run map
   })
   
+  
+  
   #add a table
   output$hurrTable <- DT::renderDataTable(
     DT::datatable({
-      filter() #use filtered data
+      reactData <- filter() #use filtered data
+      a1 <- aggregate(. ~hur_code+hur_name+landfall+year(date), reactData[,c(1:3,10,4)], max)[0:5]
+      a2 <- aggregate(. ~hur_code+type, reactData[,c(1,11,12)], min)
+      
+      combined <- merge(a1, a2, by="hur_code")
+      
+      #add a category column to combined:
+      combined$category[combined$max_speed <= 33] <- 'TD'
+      combined$category[combined$max_speed >= 34 & combined$max_speed <= 63] <- 'TS'
+      combined$category[combined$max_speed >= 64 & combined$max_speed <= 82] <- '1'
+      combined$category[combined$max_speed >= 83  & combined$max_speed <= 95] <- '2'
+      combined$category[combined$max_speed >= 96 & combined$max_speed <= 112] <- '3'
+      combined$category[combined$max_speed >= 113 & combined$max_speed <= 136] <- '4'
+      combined$category[combined$max_speed >= 137] <- '5'
+      
+      #change name of A and N
+      combined$type[combined$type == 'A'] <- 'Atlantic'
+      combined$type[combined$type == 'N'] <- 'Pacific'
+      
+      #rename columns
+      columns <- c("Codename", "Name","Landfall", "Year", "Max Speed", "Ocean", "Min Pressure", "Category")
+      colnames(combined) <- columns
+      
+      #reorder table
+      combined <- combined[, c(1,2,4,6,5,7,3,8)]
+      combined[2:8]  #run datatable
+      
     },
-    options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
+    options = list(searching = TRUE, pageLength = 12, lengthChange = FALSE
     ), rownames = FALSE
     )
   )
+  
   
   #add line graph for max wind speed
   output$maxWindSpeed <-renderPlot({
@@ -1096,19 +1164,21 @@ server <- function(input, output, session) {
                             values = c("red"))+
         xlab("Dates")+
         ylab("Max Wind Speed")+
-        ggtitle(paste("Wind Speed for Year ",input$hurrYear))
+        ggtitle(paste("Wind Speed for Year ",input$hurrYear))+
+        theme(text = element_text(size = 18)) 
       graph
     }
     else{
       graph = ggplot() +
         geom_line(data=maxASpeed, aes(x=date,y=max_speed, colour="Atlantic")) +
-        geom_line(data=maxNSpeed, aes(x=date,y=max_speed, colour="North")) +
+        geom_line(data=maxNSpeed, aes(x=date,y=max_speed, colour="Pacific")) +
         scale_colour_manual("",
-                            breaks = c("Atlantic","North"),
-                            values = c("red","blue"))+
+                            breaks = c("Atlantic","Pacific"),
+                            values = c("red","navy"))+
         xlab("Dates")+
         ylab("Max Wind Speed")+
-        ggtitle(paste("Wind Speed for Year ",input$hurrYear))
+        ggtitle(paste("Wind Speed for Year ",input$hurrYear))+
+        theme(text = element_text(size = 18)) 
       graph
     }
   }) # End line graph for max wind speed
@@ -1124,27 +1194,53 @@ server <- function(input, output, session) {
                             values = c("red"))+
         xlab("Dates")+
         ylab("Max Wind Speed")+
-        ggtitle(paste("Min Pressure for the year of ",input$hurrYear))
+        ggtitle(paste("Min Pressure for Year ",input$hurrYear))+
+        theme(text = element_text(size = 18)) 
       graph
     }
+    
     else{
       graph = ggplot() +
         geom_line(data=minASpeed, aes(x=date,y=min_pressure, colour="Atlantic")) +
-        geom_line(data=minNSpeed, aes(x=date,y=min_pressure, colour="North")) +
+        geom_line(data=minNSpeed, aes(x=date,y=min_pressure, colour="Pacific")) +
         scale_colour_manual("",
-                            breaks = c("Atlantic","North"),
-                            values = c("red","blue"))+
+                            breaks = c("Atlantic","Pacific"),
+                            values = c("red","navy"))+
         xlab("Dates")+
         ylab("Max Wind Speed")+
-        ggtitle(paste("Min Pressure for the year of ",input$hurrYear))
+        ggtitle(paste("Min Pressure for Year ",input$hurrYear))+
+        theme(text = element_text(size = 18)) 
       graph
     }
   })
   
   
-  # output$value <- renderText({ input$somevalue })     #text output
+  output$explanation <- renderText(
+    print("The Pacific and Atlantic Oceans are expansive hubs of hurricane activity. Each
+          year, numerous hurricanes form over the oceans and move, finally dying out as
+          they reach land. Our team used data since 1851 to the present to visualize and
+          analyze these movements.")
+  )
+  
+  #info box
+  output$progressBox <- renderInfoBox({
+    numberData = 0   #number to display on progressbar
+    reactData <- filter()
+    if (nrow(reactData) > 0){
+      aggregated <- aggregate(. ~hur_code+hur_name, reactData[,c(1,3,10)], min) #aggregate to show actual amount of hurs.
+      numberData = nrow(aggregated)  #number of hurricanes shown on map
+    }  
+    
+    infoBox(
+      "Count", paste("Displaying ", numberData, " hurricanes"), icon = icon("chart-bar"),
+      color = "black"
+    )
+    
+  })
+  
   
   #data components above  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   
-}
-shinyApp(ui = ui, server = server)
+}#end server block
+
+shinyApp(ui = ui, server = server)  #use ui and server in shiny app
