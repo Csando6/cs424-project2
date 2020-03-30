@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1583878668645.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "F7BE0565",
+    "lastKnownWriteTime" : 1585546118,
+    "last_content_update" : 1585546582922,
+    "path" : "~/Documents/github/cs424-project2/app.R",
+    "project_path" : "app.R",
+    "properties" : {
+        "cursorPosition" : "938,4",
+        "docOutlineVisible" : "0",
+        "scrollLine" : "925"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
