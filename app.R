@@ -51,6 +51,7 @@ data$min_pressure[data$min_pressure == -999] <- NA
 data$landfall[data$record_id == 'L'] <- 50
 data$landfall[data$record_id != 'L'] <- 0
 
+
 #getting data from 2005 and onwards
 data2005 <- data #[year(data$date) >= 2005,]
 
@@ -79,8 +80,10 @@ hurMaxSpeed2 <- aggregate(. ~hur_code+hur_name+year(date), dataQ, max)[0:4]
 hurMaxSpeed2 <- hurMaxSpeed2[order(hurMaxSpeed2$hur_name, decreasing = FALSE),]
 
 #filters by whether the hurricane made landfall or not - Matt
-dataL <- data2005[,c(1,2,25)]
-hurLandfall <- aggregate(. ~hur_code+hur_name, dataL, max)
+#add the type in there as well - it will be useful later on
+dataL <- data2005[,c(1,2,25,24)]
+hurLandfall <- aggregate(. ~hur_code+hur_name+type, dataL, max)
+hurLandfall <- hurLandfall[, c(1,2,4,3)] #reorder columns
 
 
 
@@ -117,7 +120,7 @@ hurLandfall$landfall[hurLandfall$landfall == 0]  <- '-'
 # along with all helpful columns. -Matt
 merg0 = merge(hurYear[c(1:3)], hurMaxSpeed[c(1,3:4)], by="hur_code")
 merg1 = merge(merg0, hurMinPressure[c(1,3)], by="hur_code")
-merg2 = merge(merg1, hurLandfall[c(1,3)], by="hur_code")
+merg2 = merge(merg1, hurLandfall[c(1,3,4)], by="hur_code")
 classifiedHurricanes <- with(merg2,  merg2[order(hur_name),])
 
 
@@ -138,10 +141,10 @@ ambersDataCol2005 = merge(hurLandfall[c(1,3)], ambersDataCol2005, by="hur_code")
 
 #remove all hurricanes except the 5 favs:
 ourHurricanes = dataCol2005[dataCol2005$hur_code == 'AL092017' |
-                            dataCol2005$hur_code == 'AL112017' |
-                            dataCol2005$hur_code == 'AL152017' |
-                            dataCol2005$hur_code == 'AL062018' |
-                            dataCol2005$hur_code == 'AL142018',]
+                              dataCol2005$hur_code == 'AL112017' |
+                              dataCol2005$hur_code == 'AL152017' |
+                              dataCol2005$hur_code == 'AL062018' |
+                              dataCol2005$hur_code == 'AL142018',]
 
 
 #getting top 10 hurricanes by max speed
@@ -167,94 +170,118 @@ ui <- dashboardPage(
   
   #Header
   dashboardHeader(title = "Hurricane Data Analysis"),
-
+  
   #Sidebar
   dashboardSidebar(disable = FALSE, collapsed = FALSE,
                    
-    #INPUT FROM USER:
-
-    selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
-    selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
-    selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
-                 
-    checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
-    checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
-    checkboxInput("checkbox2005", "Only Since 2005", value = TRUE, width = NULL),
-    checkboxInput("landfallCheckbox", "Only Making Landfall", value = FALSE, width = NULL),
-    
-    selectInput(inputId="mapRender",  #choose map style
-               label="Map Rendering",
-               choices=mapRenderingsList),
-    checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
+                   #INPUT FROM USER:
+                   
+                   selectInput("hurrYear","Hurricanes By Year",append(c("","All"),seq(dataRange2005[1],dataRange2005[2],by=1)), selected=2018),
+                   selectInput("hurrName","Hurricanes By Name",append("All",as.character(hurMaxSpeed$hur_name)), selected="All"),
+                   selectInput("hurrTop","Top 10 Hurricanes",append(c("","All"),as.character(hurTop10$hur_code)), selected=""),
+                   dateInput("hurrDate", "Date:",value="", format="mm/dd/yyyy"),
+                   checkboxInput("atlanticCheckbox", "Atlantic Hurricanes", value = TRUE, width = NULL),
+                   checkboxInput("pacificCheckbox", "Pacific Hurricanes", value = TRUE, width = NULL),
+                   checkboxInput("checkbox2005", "Only Since 2005", value = TRUE, width = NULL),
+                   checkboxInput("landfallCheckbox", "Only Making Landfall", value = FALSE, width = NULL),
+                   
+                   selectInput(inputId="mapRender",  #choose map style
+                               label="Map Rendering",
+                               choices=mapRenderingsList),
+                   checkboxInput("ourHurCheckbox", "Our 5 Favorites", value = FALSE, width = NULL)
   ),
   
   #Body
   dashboardBody(
-   
+    
+    # -------------------------------------------------------------------------------------------------------------------------------------------- #
+    # Look HERE
+    
+    
+    # -------------------------------------------------------------------------------------------------------------------------------------------- #
+    
     dark_theme_mod,  ### changing theme
-
+    
     # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
       
+      
+      
+      # -------------------------------------------------------------------------------------------------------------------------------------------- #
       #left column
       column(12,
-             # < LEAFLET >:
-             box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
-                 leafletOutput("leaf", height = 600)
-             ),
-             # < TABLE OF HURRICANES SINCE 2005 >:
-             box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
-                 dataTableOutput("hurrTable", height=400)
-             ),
-             # < MAX SPEED LINE GRAPH >:
-             box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
-               plotOutput("maxWindSpeed", height=600)
-             ),
-             # < MAX SPEED LINE GRAPH >:
-             box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
-                 plotOutput("minPressure", height=600)
-             ),
-             # #HURRICANES PER YEAR
-             box(title = "Number of Hurricanes Per Year Since 2005", solidHeader = TRUE, status = "primary", width= 12,
-                plotOutput("bargraph1", height = 600)
-                ), 
              
-             # # HURRICANES AND THEIR MAX STRENGTH
-             box(title = "Hurricane Max Speed", solidHeader = TRUE, status = "primary", width= 12,
-                 plotOutput("bargraph2", height = 600)
-             ),
-             
-             # # HURRICANES AND THEIR MAX STRENGTH
-             box(title = "Hurricane Max Category", solidHeader = TRUE, status = "primary", width= 12,
-                 plotOutput("bargraph3", height = 600)
-             ),
-      
-            # STACKED BAR CHART
-            box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
-                plotOutput("bargraph4", height = 800)
-            )
-  
+             tabsetPanel(
+               
+               tabPanel ( "Tab1" ,
+                          # < LEAFLET >:
+                          box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
+                              leafletOutput("leaf", height = 600)
+                          ),
+                          # < TABLE OF HURRICANES SINCE 2005 >:
+                          box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
+                              dataTableOutput("hurrTable", height=400)
+                          ),
+               ), # End tabPanel
+               # -------------------------------------------------------------------------------------------------------------------------------------------- #
+               # -------------------------------------------------------------------------------------------------------------------------------------------- #
+               
+               tabPanel("Tab 2", 
+                        # < MAX SPEED LINE GRAPH >:
+                        box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
+                            plotOutput("maxWindSpeed", height=600)
+                        ),
+                        # < MAX SPEED LINE GRAPH >:
+                        box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
+                            plotOutput("minPressure", height=600)
+                        ),
+                        
+               ), # End tab Panel
+               # -------------------------------------------------------------------------------------------------------------------------------------------- #
+               # -------------------------------------------------------------------------------------------------------------------------------------------- #
+               
+               tabPanel("Tab3",
+                        
+                        # # HURRICANES AND THEIR MAX STRENGTH
+                        box(title = "Number of Hurricanes Per Category", solidHeader = TRUE, status = "primary", width= 12,
+                            plotOutput("bargraph3", height = 600)
+                        ),
+                        
+                        # #HURRICANES PER YEAR
+                        box(title = "Number of Hurricanes Per Year", solidHeader = TRUE, status = "primary", width= 12,
+                            plotOutput("bargraph1", height = 600)
+                        ), 
+                        
+                        # STACKED BAR CHART
+                        box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
+                            plotOutput("bargraph4", height = 800)
+                        )
+               ),   # End Tab3
+               
+               tabPanel ( "About" , 
+                          
+               )
              )  #, #End column
+      ) #end major fluidRow
       
-      # #middle coulumn
-      # column(1,
-      #        # < SEARCH BY DAY >:
-      # ),
-      # 
-      # #right column (tables)  - amber this is the first part
-      # column(1,
-      #        # < BAR CHART BY YEAR >:
-      #        # < BAR CHART BY MAX STRENGTH >:
-      #        # < ABOUT >:
-      #        
-      # )      
-      
-    ) #end major fluidRow
+    ) # End tabsetPanel
     
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ) # End dash board body
   
-  ) # End dashboard page
+  
+  # -------------------------------------------------------------------------------------------------------------------------------------------- #
+  
+  
+) # End dashboard page
+
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+
 
 
 # SERVER SIDE:
@@ -277,14 +304,16 @@ server <- function(input, output, session) {
     else if(input$ourHurCheckbox == TRUE && input$landfallCheckbox == TRUE){
       ourHurricanes[ourHurricanes$landfall == 'yes',]
     }
-    
+    else if(!is_empty(input$hurrDate)){
+      #print(input$hurrDate)
+      dateVal <- ymd(input$hurrDate)
+      #print(dateVal)
+      dataCol2005[dataCol2005$date==input$hurrDate,]
+    }
     else if (input$pacificCheckbox == FALSE){
-
       if (input$atlanticCheckbox == FALSE){
         dataCol2005[dataCol2005$type=='N/A',] #if neither atlantic nor pacific true -> show none
       }
-      
-      
       #DUPLICATED FOR ATLANTIC OCEAN:
       
       else{ #atlantic == TRUE
@@ -800,9 +829,9 @@ server <- function(input, output, session) {
     
     
   )
-
-
-
+  
+  
+  
   #creates table for lineGraph of max wind speed
   filterWindA <- reactive(
     #get max windspeed per day for specified year
@@ -854,7 +883,7 @@ server <- function(input, output, session) {
       maxNSpeed
     }
   )
-
+  
   filterMinA <- reactive(
     if(input$hurrYear != "All"){
       minAtlantic <- data2005[data2005$type =="A" & year(data2005$date)==input$hurrYear,]
@@ -900,56 +929,95 @@ server <- function(input, output, session) {
     }
   )
   
-  
   #top10 list
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
       data2005 
     }
   )
-    
+  
   #amber: this is the other part
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
   
-  # Number of Hurricanes per year since 2005
-  output$bargraph1 <- renderPlot({
-    ggplot(data = barChartData, aes(x = column3)) +
-             geom_bar(stat="bin", colour="black", fill="#DD8888",) +
-            xlab("Year") + ylab("Number of Hurricanes") + 
-            theme(text = element_text(size = 25)) }
-  ) # End bargraph1
+  data2005$year <-year(data2005$date)
+  data2005$year <- as.character(data2005$year)
   
-  # Hurricanes with respect to their max speed 
-  output$bargraph2 <- renderPlot({
-    ggplot(data = barChartData, aes(x = column4)) +
-      geom_bar(stat="bin", colour="black", fill="#DD8888",) +
-      xlab("Max Speed") + ylab("Number of Hurricanes") + 
-      theme(text = element_text(size = 25)) }
-  ) # End bargraph2
+  userReactive <- reactive(
+    if (input$checkbox2005 == TRUE){
+      if(input$hurrYear != "All"){
+        subset(classifiedHurricanes, classifiedHurricanes$date == input$hurrYear & classifiedHurricanes$date >= 2005)
+      }
+      else
+        subset(classifiedHurricanes, classifiedHurricanes$date >= 2005)
+    }
+    else{
+      if(input$hurrYear != "All"){
+        subset(classifiedHurricanes, classifiedHurricanes$date == input$hurrYear)
+      }
+      else
+        classifiedHurricanes
+    }
+  )
   
   # Hurricanes with respect to their max category 
   output$bargraph3 <- renderPlot({
-    ggplot(data = barChartData, aes(x = column5)) +
-      geom_bar(stat="count", colour="black", fill="#DD8888",) +
-      xlab("Max Category") + ylab("Number of Hurricanes") + 
+    
+    hurPerYearReactive <- userReactive()
+    
+    ggplot(data = hurPerYearReactive, aes(x = category, fill=type)) +
+      geom_bar(stat="count", position = "dodge") +
+      xlab("Category") + ylab("Number of Hurricanes") + 
+      scale_fill_manual(values=c('navy', '#e4283B'), name="Ocean", labels = c("Atlantic", "Pacific")) +
+      theme(text = element_text(size = 18)) 
+  }) # End bargraph3
+  
+  
+  
+  # Number of Hurricanes per year
+  output$bargraph1 <- renderPlot({
+    hurPerYearReactive <- userReactive()
+    
+    #get min and max year for chart
+    min_year <- min(hurPerYearReactive$date)
+    if (min_year==1851 | min_year==1852){min_year=1850}   #subtract 1 year to show proper decades (1860, 1870)
+    max_year <- max(hurPerYearReactive$date)
+    
+    ggplot(hurPerYearReactive, aes(x = date, fill=type, width=0.3)) +
+      xlab("Year") + ylab("Number of Hurricanes") +
+      geom_bar(width=0.3) +
+      scale_fill_manual(values=c('navy', '#e4283B'), name="Ocean", labels = c("Atlantic", "Pacific")) +
+      scale_x_continuous(breaks = seq(min_year, max_year, by=10)) +
       
-      theme(text = element_text(size = 24)) 
-    }
-  ) # End bargraph3
+      theme(text = element_text(size = 18)) 
+  }) # End bargraph1
+  
+  
   
   # Stacked Bar Graph Displaying Num of Hurricane Including Categories since 2005
   output$bargraph4 <- renderPlot({
-    (ggplot(data = barChartData, aes(x = column3, fill = column5)) +
-     geom_bar(position ="stack", stat = "count")
-     + xlab("Year") + ylab("Number of Hurricanes") + 
-      scale_fill_brewer(palette = 10) +
-      theme(text = element_text(size = 25))
- ) # end ggplot
     
-    }
+    hurPerYearReactive <- userReactive()
+    #reassign the level of category column:
+    hurPerYearReactive$category <- factor(hurPerYearReactive$category, 
+                                          levels = rev(c("TD", "TS", "1", "2", "3", "4", "5")))
+    
+    #get min and max year for chart
+    min_year <- min(hurPerYearReactive$date)
+    if (min_year==1851 | min_year==1852){min_year=1850}   #subtract 1 year to show proper decades (1860, 1870)
+    max_year <- max(hurPerYearReactive$date)
+    
+    (ggplot(data = hurPerYearReactive, aes(x = date, fill = category)) +
+        geom_bar(position ="stack", stat = "count") + 
+        xlab("Year") + ylab("Number of Hurricanes") + 
+        scale_fill_manual(values=rev(c('#488f31', '#6dac78', '#b7cf8d', '#fff1af', '#f5bb78', '#e98058', '#de425b')), name="Category") + #color theme
+        scale_x_continuous(breaks = seq(min_year, max_year, by=10)) + #labels on x axis
+        theme(text = element_text(size = 18))                         #size of text
+    ) # end ggplot
+    
+  }
   ) # End bargraph4
-
-
+  
+  
   square <- function(x) {  #square of a number
     return(x * x) 
     #Charly S: Do we need this function, wanting to remove it
@@ -969,27 +1037,27 @@ server <- function(input, output, session) {
     
     #map object
     map <- leaflet(data = reactData) %>%
-          addTiles() %>%
-          addProviderTiles(mapRenderings[[input$mapRender]]) %>%
-          setView(lng = -75.9, lat = 39.1, zoom = 3) %>%
-          addCircles(  
-              lng = reactData$lon, lat = reactData$lat, 
-              color = pal(reactData$max_speed), 
-              radius = 2,
-              weight = reactData$max_speed / 3.5,    #1->5   2->20   3->40
-              label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " mbar, on",
-                    month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time      
-              ),
-              labelOptions = labelOptions(textOnly = TRUE, direction = "top",
-                    style = list(
-                      "color" = "black",
-                      # "font-style" = "italic",
-                      "box-shadow" = "3px 3px 3px rgba(0,0,0,1)",
-                      "font-size" = "10px",
-                      "background-color" =  "white"
-                    )
-              )
-          ) 
+      addTiles() %>%
+      addProviderTiles(mapRenderings[[input$mapRender]]) %>%
+      setView(lng = -75.9, lat = 39.1, zoom = 3) %>%
+      addCircles(  
+        lng = reactData$lon, lat = reactData$lat, 
+        color = pal(reactData$max_speed), 
+        radius = 2,
+        weight = reactData$max_speed / 3.5,    #1->5   2->20   3->40
+        label = paste(reactData$hur_name, ": ", reactData$max_speed, " knots, ", reactData$min_pressure, " mbar, on",
+                      month(reactData$date), "/", day(reactData$date), "/", year(reactData$date), " @ ", reactData$time      
+        ),
+        labelOptions = labelOptions(textOnly = TRUE, direction = "top",
+                                    style = list(
+                                      "color" = "black",
+                                      # "font-style" = "italic",
+                                      "box-shadow" = "3px 3px 3px rgba(0,0,0,1)",
+                                      "font-size" = "10px",
+                                      "background-color" =  "white"
+                                    )
+        )
+      ) 
     map   #run map
   })
   
@@ -997,9 +1065,9 @@ server <- function(input, output, session) {
   output$hurrTable <- DT::renderDataTable(
     DT::datatable({
       filter() #use filtered data
-      },
-      options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
-      ), rownames = FALSE
+    },
+    options = list(searching = TRUE, pageLength = 10, lengthChange = FALSE
+    ), rownames = FALSE
     )
   )
   
