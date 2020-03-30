@@ -203,6 +203,7 @@ ui <- dashboardPage(
      
       #central column:
       column(12,
+
              
              tabsetPanel(
                
@@ -322,6 +323,7 @@ ui <- dashboardPage(
     ) # End tabsetPanel
   ) # End dash board body
   
+
   
   
   # -------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -330,7 +332,6 @@ ui <- dashboardPage(
 ) # End dashboard page
 
 
-#................................................................................................................................................ #
 # SERVER SIDE:
 server <- function(input, output, session) {
   
@@ -699,7 +700,7 @@ server <- function(input, output, session) {
           #user selected hurrName to a name, hurrYear to a year
           else{
             updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
+              ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
           }
         }
       }
@@ -983,9 +984,11 @@ server <- function(input, output, session) {
   # )
   
   
-  data$year <-year(data$date)
-  data$year <- as.character(data$year)
-  
+  #amber: this is the other part
+  #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
+
+  data2005$year <-year(data2005$date)
+  data2005$year <- as.character(data2005$year)
   
   #reactive function used in bar charts
   #filters only by specific hurrYear and by 2005+
