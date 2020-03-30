@@ -191,13 +191,26 @@ ui <- dashboardPage(
   #Body
   dashboardBody(
    
+    # -------------------------------------------------------------------------------------------------------------------------------------------- #
+    # Look HERE
+    
+    
+    # -------------------------------------------------------------------------------------------------------------------------------------------- #
+    
     dark_theme_mod,  ### changing theme
 
     # APPLICATION LAYOUT: ---- insert layout components here: ------------------------------------------------------
     fluidRow(
       
+      
+      
+      # -------------------------------------------------------------------------------------------------------------------------------------------- #
       #left column
       column(12,
+             
+             tabsetPanel(
+             
+             tabPanel ( "Tab1" ,
              # < LEAFLET >:
              box(title = "Hurricane Map", solidHeader = TRUE, status = "primary", width = 12,
                  leafletOutput("leaf", height = 600)
@@ -206,6 +219,11 @@ ui <- dashboardPage(
              box(title="Hurricane List", background = "black", solidHeader = TRUE, status="primary", width=12,
                  dataTableOutput("hurrTable", height=400)
              ),
+             ), # End tabPanel
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             
+             tabPanel("Tab 2", 
              # < MAX SPEED LINE GRAPH >:
              box(title="Hurricane Max Wind Speed",solidHeader = TRUE, status="primary",width=12,
                plotOutput("maxWindSpeed", height=600)
@@ -214,8 +232,14 @@ ui <- dashboardPage(
              box(title="Hurricane Min Pressure",solidHeader = TRUE, status="primary",width=12,
                  plotOutput("minPressure", height=600)
              ),
+             
+             ), # End tab Panel
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             # -------------------------------------------------------------------------------------------------------------------------------------------- #
+             
+             tabPanel("Tab3",
              # #HURRICANES PER YEAR
-             box(title = "Number of Hurricanes Per Year Since 2005", solidHeader = TRUE, status = "primary", width= 12,
+             box(title = "Number of Hurricanes / Year", solidHeader = TRUE, status = "primary", width= 12,
                 plotOutput("bargraph1", height = 600)
                 ), 
              
@@ -233,28 +257,32 @@ ui <- dashboardPage(
             box(title = "Hurricanes & Their Strength", solidHeader = TRUE, status = "primary", width= 12,
                 plotOutput("bargraph4", height = 800)
             )
-  
-             )  #, #End column
-      
-      # #middle coulumn
-      # column(1,
-      #        # < SEARCH BY DAY >:
-      # ),
-      # 
-      # #right column (tables)  - amber this is the first part
-      # column(1,
-      #        # < BAR CHART BY YEAR >:
-      #        # < BAR CHART BY MAX STRENGTH >:
-      #        # < ABOUT >:
-      #        
-      # )      
-      
-    ) #end major fluidRow
+          ),   # End Tab3
+          
+          tabPanel ( "About" , 
+            
+          )
+        )  #, #End column
+      ) #end major fluidRow
     
+  ) # End tabsetPanel
+  
     # application layout above   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   ) # End dash board body
   
+
+  # -------------------------------------------------------------------------------------------------------------------------------------------- #
+  
+  
   ) # End dashboard page
+
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------------------------------------------------- #
+
 
 
 # SERVER SIDE:
@@ -623,7 +651,7 @@ server <- function(input, output, session) {
           #user selected hurrName to a name, hurrYear to a year
           else{
             updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-            ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+              ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
           }
         }
         
@@ -902,7 +930,6 @@ server <- function(input, output, session) {
     }
   )
   
-  
   #top10 list
   hurrTopR <- reactive(
     if(input$hurrTop == "All"){
@@ -912,12 +939,17 @@ server <- function(input, output, session) {
     
   #amber: this is the other part
   #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
+      
+      data2005$year <-year(data2005$date)
+      data2005$year <- as.character(data2005$year)
   
-  # Number of Hurricanes per year since 2005
+      userReactive <- reactive({subset(data2005, data2005$year == input$hurrYear )})
+  
+  # Number of Hurricanes per year
   output$bargraph1 <- renderPlot({
-    ggplot(data = barChartData, aes(x = column3)) +
-             geom_bar(stat="bin", colour="black", fill="#DD8888",) +
-            xlab("Year") + ylab("Number of Hurricanes") + 
+    hurPerYearReactive <- userReactive()
+      ggplot(hurPerYearReactive, aes(x = year)) +
+        xlab("Year") + ylab("Number of Hurricanes") + 
             theme(text = element_text(size = 25)) }
   ) # End bargraph1
   
