@@ -6,26 +6,28 @@
 #--Matt Jankowski----*********************************
 #-----------------------------------------------------
 
-library(shiny)
-library(shinydashboard)
-library(ggplot2)
-library(lubridate)
-library(DT)
-library(jpeg)
-library(grid)
-library(leaflet)
-library(scales)
-library(hashmap)
-library(plyr)
-library(devtools)        #for theme
-library(dashboardthemes) #for theme
-library(hflights)
-library(repurrrsive)
-library(tidyverse)
-library(RColorBrewer)
+library(shiny) #in server
+library(shinydashboard) #in server
+library(ggplot2) #in server
+library(lubridate) #in server
+library(DT) #in server
+#library(jpeg) #in server
+#library(grid) 
+library(leaflet) #in server
+library(scales) # in server
+library(hashmap) # in server
+library(plyr) #in server
+library(devtools) #in server
+library(roxygen2)
+library(rversions)
+#library(dashboardthemes) #in server
+#library(hflights) #XXXX
+#library(repurrrsive)#XXXX
+#library(tidyverse)# in server
+library(RColorBrewer)# in server
 
 #IMPORTANT: app.R needs "dark_theme_mod.R" in the same directory to run well with the dark theme:
-source("dark_theme_mod.R") #connect
+#source("dark_theme_mod.R") #connect
 
 #NOTE: the data file to be read here is first processed by our Python script.
 #READ IN THE DATA FILES:
@@ -196,14 +198,13 @@ ui <- dashboardPage(
   #Body - is made of tabs, which house individual components
   dashboardBody(
     
-    dark_theme_mod,  ### changing theme to dark
+    #dark_theme_mod,  ### changing theme to dark
     
     # APPLICATION LAYOUT: ----layout components here: ------------------------------------------------------
     fluidRow(
      
       #central column:
       column(12,
-
              
              tabsetPanel(
                
@@ -323,7 +324,6 @@ ui <- dashboardPage(
     ) # End tabsetPanel
   ) # End dash board body
   
-
   
   
   # -------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -332,6 +332,7 @@ ui <- dashboardPage(
 ) # End dashboard page
 
 
+#................................................................................................................................................ #
 # SERVER SIDE:
 server <- function(input, output, session) {
   
@@ -700,7 +701,7 @@ server <- function(input, output, session) {
           #user selected hurrName to a name, hurrYear to a year
           else{
             updateSelectInput(session,"hurrTop",choices=append("All",as.character(hurTop10$hur_code)), selected="")
-              ambersDataCol2005[year(ambersDataCol2005$date)==input$hurrYear & ambersDataCol2005$hur_name==input$hurrName & ambersDataCol2005$landfall == 'yes' & ambersDataCol2005$type=='N',]
+            dataCol2005[year(dataCol2005$date)==input$hurrYear & dataCol2005$hur_name==input$hurrName & dataCol2005$landfall == 'yes' & dataCol2005$type=='N',]
           }
         }
       }
@@ -984,11 +985,9 @@ server <- function(input, output, session) {
   # )
   
   
-  #amber: this is the other part
-  #PLOT THE DATA: ---- insert data components here (in any order): -------------------------------------------
-
-  data2005$year <-year(data2005$date)
-  data2005$year <- as.character(data2005$year)
+  data$year <-year(data$date)
+  data$year <- as.character(data$year)
+  
   
   #reactive function used in bar charts
   #filters only by specific hurrYear and by 2005+
